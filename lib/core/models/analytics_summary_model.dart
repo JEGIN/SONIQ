@@ -39,7 +39,8 @@ enum AnalyticsTimeFilter {
     switch (this) {
       case AnalyticsTimeFilter.today:
         final start = DateTime(now.year, now.month, now.day);
-        return DateTimeRange(start: start, end: now);
+        final end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+        return DateTimeRange(start: start, end: end);
       case AnalyticsTimeFilter.last7Days:
         final start = DateTime(
           now.year,

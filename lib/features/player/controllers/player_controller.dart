@@ -29,6 +29,8 @@ class AudioPlayerController extends GetxController {
   final RxInt sleepTimerMinutes = 0.obs;
   final RxBool stopAfterCurrentTrack = false.obs;
 
+  PlaybackIntent get playbackIntent => audioHandler.playbackIntent;
+
   @override
   void onInit() {
     super.onInit();

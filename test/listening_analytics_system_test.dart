@@ -191,6 +191,7 @@ void main() {
   group('Listening Analytics Aggregation Engine', () {
     test('Computes accurate listening time, completion rate, and rankings', () async {
       final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
 
       // Seed 4 events:
       // Song A: 120s (qualified, completed), Song A: 100s (qualified, completed) -> Total 220s, 2 plays
@@ -201,7 +202,7 @@ void main() {
         title: 'Song A',
         artist: 'Artist Alpha',
         album: 'Album Red',
-        startTimeMs: now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch,
+        startTimeMs: startOfToday.add(const Duration(minutes: 10)).millisecondsSinceEpoch,
         listenedMs: 120000,
         trackDurationMs: 120000,
         isSkipped: false,
@@ -212,7 +213,7 @@ void main() {
         title: 'Song A',
         artist: 'Artist Alpha',
         album: 'Album Red',
-        startTimeMs: now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch,
+        startTimeMs: startOfToday.add(const Duration(minutes: 20)).millisecondsSinceEpoch,
         listenedMs: 100000,
         trackDurationMs: 120000,
         isSkipped: false,
@@ -223,7 +224,7 @@ void main() {
         title: 'Song B',
         artist: 'Artist Beta',
         album: 'Album Blue',
-        startTimeMs: now.subtract(const Duration(minutes: 30)).millisecondsSinceEpoch,
+        startTimeMs: startOfToday.add(const Duration(minutes: 30)).millisecondsSinceEpoch,
         listenedMs: 40000,
         trackDurationMs: 150000,
         isSkipped: true,
@@ -234,7 +235,7 @@ void main() {
         title: 'Song C',
         artist: 'Artist Beta',
         album: 'Album Blue',
-        startTimeMs: now.subtract(const Duration(minutes: 10)).millisecondsSinceEpoch,
+        startTimeMs: startOfToday.add(const Duration(minutes: 40)).millisecondsSinceEpoch,
         listenedMs: 15000,
         trackDurationMs: 180000,
         isSkipped: true,

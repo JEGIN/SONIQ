@@ -38,8 +38,24 @@ Future<SoniqAudioHandler> initAudioHandler() async {
   );
 }
 
+enum PlaybackIntent {
+  /// The user explicitly commanded playback (play button, selecting a song, etc.).
+  playing,
+
+  /// The user explicitly commanded pause (in-app, notification, lockscreen, Android Auto, headset).
+  manualPause,
+
+  /// The user explicitly stopped playback.
+  manualStop,
+
+  /// Playback was actively running, but was temporarily interrupted (phone call, navigation prompt, external app focus loss).
+  interrupted,
+}
+
 class SoniqAudioHandler extends BaseAudioHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer(
+    handleInterruptions: false,
+  );
   final SongCacheService _cacheService = SongCacheService();
   final ArtworkCacheService _artworkService = ArtworkCacheService();
 
@@ -52,8 +68,16 @@ class SoniqAudioHandler extends BaseAudioHandler {
   String _currentPlaybackSource = 'all_songs';
   String? _currentPlaybackSourceId;
   String? _lastOutputDevice;
-  bool _resumeAfterNoisyRouteChange = false;
   String? _crossfadeFadingSongId;
+
+  // Authoritative Playback Intent State Machine & Revision Tracking
+  PlaybackIntent _playbackIntent = PlaybackIntent.manualPause;
+  int _intentRevision = 0;
+  int _interruptedRevision = -1;
+  bool _isDucked = false;
+
+  PlaybackIntent get playbackIntent => _playbackIntent;
+  int get intentRevision => _intentRevision;
 
   AudioPlayer get player => _player;
   List<SongModel> get currentPlaylist => _effectivePlaylist;
@@ -104,47 +128,100 @@ class SoniqAudioHandler extends BaseAudioHandler {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
 
-    // Handle headphone unplug or Bluetooth disconnect
+    // Handle headphone unplug or Bluetooth disconnect (Becoming Noisy)
     session.becomingNoisyEventStream.listen((_) {
-      final autoPlay =
-          _cacheService.getSetting(
-            'auto_play_on_cast_change',
-            defaultValue: false,
-          ) ==
-          true;
-      _resumeAfterNoisyRouteChange = autoPlay && _player.playing;
+      debugPrint('SONIQ: Becoming noisy event received (headset unplugged / Bluetooth disconnected).');
+      _playbackIntent = PlaybackIntent.manualPause;
+      _interruptedRevision = -1;
+      _intentRevision++;
       pause();
-      if (autoPlay) {
-        Future.delayed(const Duration(milliseconds: 450), () {
-          if (_resumeAfterNoisyRouteChange && currentSong != null) {
-            _resumeAfterNoisyRouteChange = false;
-            play();
-          }
-        });
-      }
     });
 
-    // Handle audio interruptions (e.g. phone call)
-    session.interruptionEventStream.listen((event) {
+    // Authoritative Audio Interruption & Focus Change Handler
+    session.interruptionEventStream.listen((event) async {
+      debugPrint(
+        'SONIQ Focus Event: begin=${event.begin}, type=${event.type}, '
+        'intent=$_playbackIntent, rev=$_intentRevision, intRev=$_interruptedRevision',
+      );
+
       if (event.begin) {
+        // --- INTERRUPTION STARTED ---
         switch (event.type) {
           case AudioInterruptionType.duck:
-            _player.setVolume(0.3);
+            if (_player.playing && _playbackIntent == PlaybackIntent.playing) {
+              _isDucked = true;
+              await _player.setVolume(0.25);
+            }
             break;
+
           case AudioInterruptionType.pause:
+            // Transient focus loss (phone call, Instagram reel, YouTube video, etc.)
+            if (_playbackIntent == PlaybackIntent.playing && _player.playing) {
+              _playbackIntent = PlaybackIntent.interrupted;
+              _interruptedRevision = ++_intentRevision;
+              await _player.pause();
+              _broadcastPlaybackState();
+              debugPrint('SONIQ: Playback interrupted. Will auto-resume when interruption ends.');
+            } else {
+              // Was ALREADY manually paused or stopped. PRESERVE user intent!
+              debugPrint('SONIQ: Interruption occurred while already paused/stopped. Preserving manual pause.');
+              if (_player.playing) {
+                await _player.pause();
+                _broadcastPlaybackState();
+              }
+            }
+            break;
+
           case AudioInterruptionType.unknown:
-            pause();
+            // Permanent focus loss (e.g. another music player took exclusive audio)
+            _playbackIntent = PlaybackIntent.manualPause;
+            _interruptedRevision = -1;
+            _intentRevision++;
+            await _player.pause();
+            _broadcastPlaybackState();
+            debugPrint('SONIQ: Permanent audio focus loss. Transitioned to manualPause.');
             break;
         }
       } else {
+        // --- INTERRUPTION ENDED ---
         switch (event.type) {
           case AudioInterruptionType.duck:
-            _player.setVolume(1.0);
+            if (_isDucked) {
+              _isDucked = false;
+              await _player.setVolume(1.0);
+            }
             break;
+
           case AudioInterruptionType.pause:
-            play();
+            // Transient focus returned (phone call ended, Instagram closed, YouTube stopped)
+            final currentRev = _intentRevision;
+            if (_playbackIntent == PlaybackIntent.interrupted &&
+                currentRev == _interruptedRevision &&
+                currentSong != null) {
+              _playbackIntent = PlaybackIntent.playing;
+              _interruptedRevision = -1;
+              _intentRevision++;
+              debugPrint('SONIQ: Auto-resuming playback after genuine transient interruption.');
+              final granted = await session.setActive(true);
+              if (granted) {
+                await _player.play();
+                _broadcastPlaybackState();
+              } else {
+                _playbackIntent = PlaybackIntent.manualPause;
+                _broadcastPlaybackState();
+              }
+            } else {
+              // CRITICAL REQUIREMENT: If the user manually paused BEFORE or DURING
+              // the interruption, DO NOT AUTO-RESUME. Manual pause is 100% authoritative!
+              debugPrint(
+                'SONIQ: Audio focus gained, but playbackIntent=$_playbackIntent. '
+                'Manual pause is authoritative: REMAINING PAUSED.',
+              );
+            }
             break;
+
           case AudioInterruptionType.unknown:
+            debugPrint('SONIQ: Permanent focus ended. Remaining paused.');
             break;
         }
       }
@@ -167,6 +244,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
         }
         if (_player.loopMode == LoopMode.one) {
           _player.seek(Duration.zero);
+          _playbackIntent = PlaybackIntent.playing;
           _player.play();
         } else {
           skipToNext();
@@ -189,8 +267,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
             defaultValue: false,
           ) ==
           true;
-      if (autoPlay && currentSong != null) {
-        _resumeAfterNoisyRouteChange = false;
+      // ONLY allow route auto-play if user is ALREADY actively in playing intent!
+      // NEVER auto-play if user manually paused!
+      if (autoPlay && currentSong != null && _playbackIntent == PlaybackIntent.playing) {
         play();
       }
     });
@@ -253,7 +332,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
   }
 
   void _broadcastPlaybackState() {
-    final playing = _player.playing;
+    final playing = _player.playing && _playbackIntent == PlaybackIntent.playing;
     final isFav = currentSong?.isFavorite ?? false;
 
     playbackState.add(
@@ -315,6 +394,10 @@ class SoniqAudioHandler extends BaseAudioHandler {
     String? sourceId,
   }) async {
     if (songs.isEmpty) return;
+
+    _playbackIntent = PlaybackIntent.playing;
+    _interruptedRevision = -1;
+    _intentRevision++;
 
     _currentPlaybackSource = source;
     _currentPlaybackSourceId = sourceId;
@@ -609,6 +692,10 @@ class SoniqAudioHandler extends BaseAudioHandler {
             defaultValue: 0,
           ) as num).toInt();
 
+          _playbackIntent = PlaybackIntent.manualPause;
+          _interruptedRevision = -1;
+          _intentRevision++;
+
           final song = _effectivePlaylist[_currentIndex];
           final artUri = await _artworkService.getArtworkUriForSong(song.id);
           final item = _songToMediaItem(song, artUriOverride: artUri);
@@ -643,6 +730,10 @@ class SoniqAudioHandler extends BaseAudioHandler {
     if (_currentIndex < 0 || _currentIndex >= _effectivePlaylist.length) return;
     final song = _effectivePlaylist[_currentIndex];
 
+    _playbackIntent = PlaybackIntent.playing;
+    _interruptedRevision = -1;
+    final currentRev = ++_intentRevision;
+
     // 1. Immediately emit mediaItem with cached/fallback artwork so notification updates in 0ms!
     final immediateItem = _songToMediaItem(song);
     mediaItem.add(immediateItem);
@@ -656,6 +747,20 @@ class SoniqAudioHandler extends BaseAudioHandler {
     });
 
     try {
+      final session = await AudioSession.instance;
+      final granted = await session.setActive(true);
+      if (!granted) {
+        debugPrint('SONIQ: Audio focus request denied before play.');
+        _playbackIntent = PlaybackIntent.manualPause;
+        _broadcastPlaybackState();
+        return;
+      }
+
+      if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
+        debugPrint('SONIQ: Loading track superseded by user manual pause.');
+        return;
+      }
+
       final useCrossfade =
           _cacheService.getSetting('crossfade_enabled', defaultValue: false) ==
               true &&
@@ -680,6 +785,11 @@ class SoniqAudioHandler extends BaseAudioHandler {
           skipToNext();
           return;
         }
+      }
+
+      if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
+        debugPrint('SONIQ: Loading track completed but playback was paused in the interim.');
+        return;
       }
 
       await _player.play();
@@ -874,14 +984,45 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> play() async {
+    _playbackIntent = PlaybackIntent.playing;
+    _interruptedRevision = -1;
+    final currentRev = ++_intentRevision;
+
+    final session = await AudioSession.instance;
+    final granted = await session.setActive(true);
+    if (!granted) {
+      debugPrint('SONIQ: Audio focus request denied by Android. Aborting play.');
+      _playbackIntent = PlaybackIntent.manualPause;
+      _broadcastPlaybackState();
+      return;
+    }
+
+    if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
+      debugPrint('SONIQ: Play superseded by subsequent user command.');
+      return;
+    }
+
     await _player.play();
     _broadcastPlaybackState();
   }
 
   @override
   Future<void> pause() async {
+    _playbackIntent = PlaybackIntent.manualPause;
+    _interruptedRevision = -1;
+    _intentRevision++;
+
     await _player.pause();
     _broadcastPlaybackState();
+
+    // Release audio focus on manual pause so other apps (Instagram, YouTube, etc.)
+    // take audio focus without considering SONIQ an active contender.
+    try {
+      final session = await AudioSession.instance;
+      await session.setActive(false);
+    } catch (e) {
+      debugPrint('SONIQ: Error releasing audio session on pause: $e');
+    }
   }
 
   @override
@@ -889,9 +1030,21 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> stop() async {
+    _playbackIntent = PlaybackIntent.manualStop;
+    _interruptedRevision = -1;
+    _intentRevision++;
+
     await PlaybackTrackerService().finalizeActiveEvent(isSkipped: false);
     await _player.stop();
     _broadcastPlaybackState();
+
+    try {
+      final session = await AudioSession.instance;
+      await session.setActive(false);
+    } catch (e) {
+      debugPrint('SONIQ: Error releasing audio session on stop: $e');
+    }
+
     await super.stop();
   }
 
