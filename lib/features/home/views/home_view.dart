@@ -12,6 +12,7 @@ import '../../library/controllers/library_controller.dart';
 import '../../navigation/controllers/navigation_controller.dart';
 import '../../settings/views/settings_view.dart';
 import '../../car_mode/views/car_mode_view.dart';
+import '../../analytics/views/analytics_dashboard_view.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends StatelessWidget {
@@ -113,6 +114,16 @@ class HomeView extends StatelessWidget {
                           () => const CarModeView(),
                           transition: Transition.fadeIn,
                           duration: const Duration(milliseconds: 250),
+                        ),
+                      ),
+
+                      // Listening Analytics Button
+                      IconButton(
+                        icon: const Icon(Icons.insights_rounded, color: AppColors.primary),
+                        tooltip: 'Listening Analytics',
+                        onPressed: () => Get.to(
+                          () => const AnalyticsDashboardView(),
+                          transition: Transition.rightToLeft,
                         ),
                       ),
 
@@ -220,6 +231,56 @@ class HomeView extends StatelessWidget {
                           ),
                         ),
                         const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 4. Listening Analytics & Replay Feature Shortcut Banner
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: SoniqCard(
+                    onTap: () => Get.to(
+                      () => const AnalyticsDashboardView(),
+                      transition: Transition.rightToLeft,
+                    ),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF28133C), Color(0xFF130E20)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.gold, width: 1.2),
+                          ),
+                          child: const Icon(Icons.insights_rounded, color: AppColors.gold, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Listening Analytics & Replay',
+                                style: AppTypography.headlineSmall,
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Explore personal stats, top tracks, streaks & annual recap',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold, size: 16),
                       ],
                     ),
                   ),

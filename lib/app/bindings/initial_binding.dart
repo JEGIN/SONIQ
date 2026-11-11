@@ -10,6 +10,7 @@ import '../../features/settings/controllers/settings_controller.dart';
 import '../../features/equalizer/controllers/equalizer_controller.dart';
 import '../../features/playlists/controllers/favorites_controller.dart';
 import '../../features/playlists/controllers/smart_playlist_controller.dart';
+import '../../features/analytics/controllers/analytics_controller.dart';
 
 class InitialBinding extends Bindings {
   final SoniqAudioHandler audioHandler;
@@ -28,5 +29,6 @@ class InitialBinding extends Bindings {
     Get.put<HomeController>(HomeController(), permanent: true);
     Get.put<AudioStudioController>(AudioStudioController(), permanent: true);
     Get.put<SettingsController>(SettingsController(), permanent: true);
+    Get.put<AnalyticsController>(AnalyticsController(), permanent: true);
   }
 }

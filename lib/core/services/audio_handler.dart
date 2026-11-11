@@ -9,6 +9,7 @@ import '../models/song_model.dart';
 import '../database/song_cache_service.dart';
 import 'artwork_cache_service.dart';
 import 'audio_dsp_service.dart';
+import 'playback_tracker_service.dart';
 
 Future<SoniqAudioHandler> initAudioHandler() async {
   return await AudioService.init(
@@ -45,6 +46,8 @@ class SoniqAudioHandler extends BaseAudioHandler {
   final List<SongModel> _playbackHistory = [];
   bool _isShuffle = false;
   bool _stopAfterCurrentTrack = false;
+  String _currentPlaybackSource = 'all_songs';
+  String? _currentPlaybackSourceId;
 
   AudioPlayer get player => _player;
   List<SongModel> get currentPlaylist => _effectivePlaylist;
@@ -65,6 +68,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
     _artworkService.init();
     _hookNativeDspSession();
     _initPersistence();
+    PlaybackTrackerService().initialize(_player);
   }
 
   void _initPersistence() {
@@ -196,8 +200,17 @@ class SoniqAudioHandler extends BaseAudioHandler {
   }
 
   /// Sets queue and plays selected track
-  Future<void> playSongList(List<SongModel> songs, int initialIndex, {bool? shuffle}) async {
+  Future<void> playSongList(
+    List<SongModel> songs,
+    int initialIndex, {
+    bool? shuffle,
+    String source = 'all_songs',
+    String? sourceId,
+  }) async {
     if (songs.isEmpty) return;
+
+    _currentPlaybackSource = source;
+    _currentPlaybackSourceId = sourceId;
 
     if (shuffle != null) {
       _isShuffle = shuffle;
@@ -540,8 +553,13 @@ class SoniqAudioHandler extends BaseAudioHandler {
         AudioDspService().attachAudioSession(sid);
       }
 
-      // Record play count and last played in Hive
-      await _cacheService.recordSongPlayed(song.id);
+      // Track playback start in accurate Listening Analytics
+      await PlaybackTrackerService().onTrackStarted(
+        song: song,
+        source: _currentPlaybackSource,
+        playlistId: _currentPlaybackSourceId,
+      );
+
       persistCurrentQueue();
     } catch (e) {
       debugPrint('SONIQ: Error loading audio: $e');
@@ -721,6 +739,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> stop() async {
+    await PlaybackTrackerService().finalizeActiveEvent(isSkipped: false);
     await _player.stop();
     _broadcastPlaybackState();
     await super.stop();
@@ -729,6 +748,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
   @override
   Future<void> skipToNext() async {
     if (_effectivePlaylist.isEmpty) return;
+    await PlaybackTrackerService().finalizeActiveEvent(isSkipped: true);
 
     // Single song in queue edge-case handling
     if (_effectivePlaylist.length == 1) {
@@ -782,9 +802,12 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
     // If more than 3 seconds in, or only 1 song in queue, restart the song
     if (_player.position.inSeconds > 3 || _effectivePlaylist.length == 1) {
+      await PlaybackTrackerService().finalizeActiveEvent(isSkipped: true);
       await _player.seek(Duration.zero);
       return;
     }
+
+    await PlaybackTrackerService().finalizeActiveEvent(isSkipped: true);
 
     // Follow exact playback history
     if (_playbackHistory.isNotEmpty) {
@@ -810,6 +833,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
   @override
   Future<void> skipToQueueItem(int index) async {
     if (index >= 0 && index < _effectivePlaylist.length) {
+      await PlaybackTrackerService().finalizeActiveEvent(isSkipped: true);
       final curr = currentSong;
       if (curr != null) {
         _playbackHistory.add(curr);
@@ -1409,6 +1433,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> playFromMediaId(String mediaId, [Map<String, dynamic>? extras]) async {
+    PlaybackTrackerService().setOutputProfile('car_audio');
     final cachedSongs = _cacheService.getCachedSongs();
     if (cachedSongs.isEmpty) return;
 

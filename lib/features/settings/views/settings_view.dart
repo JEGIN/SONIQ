@@ -5,6 +5,8 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/soniq_card.dart';
 import '../controllers/settings_controller.dart';
 import 'about_dialog_view.dart';
+import '../../analytics/views/analytics_dashboard_view.dart';
+import '../../analytics/views/analytics_settings_view.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -101,6 +103,53 @@ class SettingsView extends StatelessWidget {
                     subtitle: const Text('Preserves 100% original MPEG bitrate during ringtone trims', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     value: true,
                     onChanged: (_) {},
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            _buildSectionHeader('Listening Analytics & Insights'),
+
+            SoniqCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.insights_rounded, color: AppColors.primary, size: 22),
+                    ),
+                    title: const Text('Listening Analytics Dashboard', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text(
+                      'View personal music statistics, top songs, trends and streaks',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                    onTap: () => Get.to(() => const AnalyticsDashboardView()),
+                  ),
+                  const Divider(color: AppColors.border, height: 1),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.privacy_tip_rounded, color: AppColors.gold, size: 22),
+                    ),
+                    title: const Text('Analytics Privacy & History', style: TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: const Text(
+                      'Manage on-device tracking, export JSON data, or clear history',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                    onTap: () => Get.to(() => const AnalyticsSettingsView()),
                   ),
                 ],
               ),

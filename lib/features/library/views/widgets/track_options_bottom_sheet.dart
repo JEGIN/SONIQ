@@ -8,6 +8,7 @@ import '../../../navigation/controllers/navigation_controller.dart';
 import '../../../player/controllers/player_controller.dart';
 import '../../../playlists/controllers/playlist_controller.dart';
 import '../../../playlists/controllers/favorites_controller.dart';
+import '../../../analytics/views/widgets/entity_analytics_sheet.dart';
 
 class TrackOptionsBottomSheet extends StatelessWidget {
   final SongModel song;
@@ -189,6 +190,21 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                     Navigator.pop(context);
                     playerController.toggleFavorite(song);
                   },
+                );
+              },
+            ),
+
+            ListTile(
+              leading: const Icon(Icons.insights_rounded, color: AppColors.gold),
+              title: const Text('View Song Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                EntityAnalyticsSheet.show(
+                  context,
+                  entityType: 'Song',
+                  entityId: song.id,
+                  title: song.title,
+                  subtitle: song.artist,
                 );
               },
             ),

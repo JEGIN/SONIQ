@@ -8,4 +8,6 @@ class HiveBoxes {
   static const String ringtones = 'soniq_ringtones_box';
   static const String smartPlaylists = 'soniq_smart_playlists_box';
   static const String classifications = 'soniq_classifications_box';
+  static const String playbackEvents = 'soniq_playback_events_box';
+  static const String analyticsSummaries = 'soniq_analytics_summaries_box';
 }

@@ -7,6 +7,7 @@ import '../models/playlist_model.dart';
 import '../models/ringtone_model.dart';
 import '../models/smart_playlist_model.dart';
 import '../models/song_classification_model.dart';
+import '../models/playback_event_model.dart';
 import 'hive_boxes.dart';
 
 class SongCacheService {
@@ -21,12 +22,14 @@ class SongCacheService {
   late Box<String> _ringtonesBox;
   late Box<String> _smartPlaylistsBox;
   late Box<String> _classificationsBox;
+  late Box<String> _playbackEventsBox;
+  late Box<String> _analyticsSummariesBox;
 
   bool _initialized = false;
   bool get isInitialized => _initialized;
 
-  Future<void> init() async {
-    if (_initialized) return;
+  Future<void> init({bool force = false}) async {
+    if (_initialized && !force) return;
 
     await Hive.initFlutter();
     _songsBox = await Hive.openBox<String>(HiveBoxes.songs);
@@ -36,6 +39,8 @@ class SongCacheService {
     _ringtonesBox = await Hive.openBox<String>(HiveBoxes.ringtones);
     _smartPlaylistsBox = await Hive.openBox<String>(HiveBoxes.smartPlaylists);
     _classificationsBox = await Hive.openBox<String>(HiveBoxes.classifications);
+    _playbackEventsBox = await Hive.openBox<String>(HiveBoxes.playbackEvents);
+    _analyticsSummariesBox = await Hive.openBox<String>(HiveBoxes.analyticsSummaries);
 
     _initialized = true;
     debugPrint('SONIQ: Hive Database initialized successfully.');
@@ -240,6 +245,64 @@ class SongCacheService {
   Future<void> setSetting(String key, dynamic value) async {
     if (!_initialized) return;
     await _settingsBox.put(key, value);
+  }
+
+  // --- LISTENING ANALYTICS PLAYBACK EVENTS ---
+  Future<void> savePlaybackEvent(PlaybackEventModel event) async {
+    if (!_initialized) return;
+    await _playbackEventsBox.put(event.id, event.toJson());
+  }
+
+  List<PlaybackEventModel> getAllPlaybackEvents() {
+    if (!_initialized) return [];
+    final list = <PlaybackEventModel>[];
+    for (final jsonStr in _playbackEventsBox.values) {
+      try {
+        list.add(PlaybackEventModel.fromJson(jsonStr));
+      } catch (e) {
+        debugPrint('SONIQ: Error decoding playback event: $e');
+      }
+    }
+    return list;
+  }
+
+  Future<void> deletePlaybackEventsInRange(DateTime start, DateTime end) async {
+    if (!_initialized) return;
+    final startMs = start.millisecondsSinceEpoch;
+    final endMs = end.millisecondsSinceEpoch;
+    final keysToDelete = <dynamic>[];
+
+    for (final entry in _playbackEventsBox.toMap().entries) {
+      try {
+        final event = PlaybackEventModel.fromJson(entry.value);
+        if (event.startTimeMs >= startMs && event.startTimeMs <= endMs) {
+          keysToDelete.add(entry.key);
+        }
+      } catch (_) {}
+    }
+    await _playbackEventsBox.deleteAll(keysToDelete);
+  }
+
+  Future<void> clearAllPlaybackEvents() async {
+    if (!_initialized) return;
+    await _playbackEventsBox.clear();
+    await _analyticsSummariesBox.clear();
+  }
+
+  bool isAnalyticsTrackingEnabled() {
+    return getSetting('analytics_tracking_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setAnalyticsTrackingEnabled(bool enabled) async {
+    await setSetting('analytics_tracking_enabled', enabled);
+  }
+
+  int getPlayCountThresholdSeconds() {
+    return getSetting('play_count_threshold_seconds', defaultValue: 30) as int;
+  }
+
+  Future<void> setPlayCountThresholdSeconds(int seconds) async {
+    await setSetting('play_count_threshold_seconds', seconds);
   }
 
   // --- STORAGE STATS & CACHE CLEARING ---

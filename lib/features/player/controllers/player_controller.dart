@@ -97,20 +97,43 @@ class AudioPlayerController extends GetxController {
   }
 
   /// Plays a specific song within a playlist list with optional shuffle specification
-  Future<void> playSong(SongModel song, List<SongModel> playlist, {bool? shuffle}) async {
+  Future<void> playSong(
+    SongModel song,
+    List<SongModel> playlist, {
+    bool? shuffle,
+    String source = 'all_songs',
+    String? sourceId,
+  }) async {
     final index = playlist.indexWhere((s) => s.id == song.id);
     final targetIndex = index >= 0 ? index : 0;
     currentSong.value = song;
     duration.value = Duration(milliseconds: song.durationMs);
-    await audioHandler.playSongList(playlist, targetIndex, shuffle: shuffle);
+    await audioHandler.playSongList(
+      playlist,
+      targetIndex,
+      shuffle: shuffle,
+      source: source,
+      sourceId: sourceId,
+    );
     queue.assignAll(audioHandler.currentPlaylist);
   }
 
   /// Plays an entire song collection from the beginning (Play All),
   /// or randomizes the sequence with a true random first track (Shuffle All).
-  Future<void> playAll(List<SongModel> songs, {bool shuffle = false}) async {
+  Future<void> playAll(
+    List<SongModel> songs, {
+    bool shuffle = false,
+    String source = 'all_songs',
+    String? sourceId,
+  }) async {
     if (songs.isEmpty) return;
-    await audioHandler.playSongList(songs, 0, shuffle: shuffle);
+    await audioHandler.playSongList(
+      songs,
+      0,
+      shuffle: shuffle,
+      source: source,
+      sourceId: sourceId,
+    );
     currentSong.value = audioHandler.currentSong;
     queue.assignAll(audioHandler.currentPlaylist);
   }
