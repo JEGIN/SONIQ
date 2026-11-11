@@ -252,14 +252,14 @@ class AudioPlayerController extends GetxController {
   }
 
   /// Insert song immediately next in queue
-  void playNext(SongModel song) {
-    audioHandler.playNext(song);
+  void playNext(SongModel song, {bool allowDuplicate = false}) {
+    audioHandler.playNext(song, allowDuplicate: allowDuplicate);
     queue.assignAll(audioHandler.currentPlaylist);
   }
 
   /// Add song to the end of the queue
-  void addToQueue(SongModel song) {
-    audioHandler.addToQueue(song);
+  void addToQueue(SongModel song, {bool allowDuplicate = false}) {
+    audioHandler.addToQueue(song, allowDuplicate: allowDuplicate);
     queue.assignAll(audioHandler.currentPlaylist);
   }
 
@@ -298,9 +298,17 @@ class AudioPlayerController extends GetxController {
     currentSong.value = audioHandler.currentSong;
   }
 
-  /// Clear upcoming queue while keeping currently playing song
-  void clearUpcomingQueue() {
-    audioHandler.clearUpcomingQueue();
+  /// Clear upcoming queue while keeping currently playing song (returns cleared songs for Undo)
+  List<SongModel> clearUpcomingQueue() {
+    final cleared = audioHandler.clearUpcomingQueue();
+    queue.assignAll(audioHandler.currentPlaylist);
+    currentIndex.value = audioHandler.currentIndex;
+    return cleared;
+  }
+
+  /// Restores recently cleared upcoming tracks back to the queue (Undo action)
+  void restoreClearedUpcomingQueue() {
+    audioHandler.restoreClearedUpcomingQueue();
     queue.assignAll(audioHandler.currentPlaylist);
     currentIndex.value = audioHandler.currentIndex;
   }
@@ -326,6 +334,29 @@ class AudioPlayerController extends GetxController {
       createdAt: DateTime.now().millisecondsSinceEpoch,
     );
     await cacheService.savePlaylist(playlist);
+    return true;
+  }
+
+  /// Add all tracks in current playback queue to an existing playlist
+  Future<bool> appendQueueToPlaylist(String playlistId) async {
+    if (queue.isEmpty) return false;
+    final playlists = cacheService.getPlaylists();
+    final idx = playlists.indexWhere((p) => p.id == playlistId);
+    if (idx < 0) return false;
+    final playlist = playlists[idx];
+    final updatedIds = List<String>.from(playlist.songIds);
+    for (final song in queue) {
+      if (!updatedIds.contains(song.id)) {
+        updatedIds.add(song.id);
+      }
+    }
+    final updatedPlaylist = PlaylistModel(
+      id: playlist.id,
+      name: playlist.name,
+      songIds: updatedIds,
+      createdAt: playlist.createdAt,
+    );
+    await cacheService.savePlaylist(updatedPlaylist);
     return true;
   }
 

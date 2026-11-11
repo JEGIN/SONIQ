@@ -476,11 +476,24 @@ class SoniqAudioHandler extends BaseAudioHandler {
     persistCurrentQueue();
   }
 
-  /// Inserts a song immediately after the currently playing song
-  void playNext(SongModel song) {
+  /// Inserts a song immediately after the currently playing song.
+  /// If [allowDuplicate] is false and the track is already in the upcoming queue,
+  /// it smoothly relocates the track to play next instead of adding a duplicate.
+  void playNext(SongModel song, {bool allowDuplicate = false}) {
     if (_effectivePlaylist.isEmpty) {
       playSongList([song], 0);
       return;
+    }
+
+    if (!allowDuplicate) {
+      final existingUpcomingIdx = _effectivePlaylist.indexWhere(
+        (s) => s.id == song.id,
+        _currentIndex + 1,
+      );
+      if (existingUpcomingIdx > _currentIndex) {
+        reorderQueue(existingUpcomingIdx, _currentIndex + 1);
+        return;
+      }
     }
 
     final insertIdx = (_currentIndex + 1).clamp(0, _effectivePlaylist.length);
@@ -494,11 +507,24 @@ class SoniqAudioHandler extends BaseAudioHandler {
     persistCurrentQueue();
   }
 
-  /// Appends a song to the end of the playback queue
-  void addToQueue(SongModel song) {
+  /// Appends a song to the end of the playback queue.
+  /// If [allowDuplicate] is false and the track is already upcoming,
+  /// moves the track to the end instead of duplicating it.
+  void addToQueue(SongModel song, {bool allowDuplicate = false}) {
     if (_effectivePlaylist.isEmpty) {
       playSongList([song], 0);
       return;
+    }
+
+    if (!allowDuplicate) {
+      final existingUpcomingIdx = _effectivePlaylist.indexWhere(
+        (s) => s.id == song.id,
+        _currentIndex + 1,
+      );
+      if (existingUpcomingIdx > _currentIndex) {
+        reorderQueue(existingUpcomingIdx, _effectivePlaylist.length);
+        return;
+      }
     }
 
     _effectivePlaylist.add(song);
@@ -566,6 +592,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
     if (index < 0 || index >= _effectivePlaylist.length) return null;
 
     final removed = _effectivePlaylist.removeAt(index);
+    _originalPlaylist.removeWhere((s) => s.id == removed.id);
 
     if (index == _currentIndex) {
       final wasPlaying =
@@ -594,6 +621,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
   void insertIntoQueue(int index, SongModel song) {
     final targetIdx = index.clamp(0, _effectivePlaylist.length);
     _effectivePlaylist.insert(targetIdx, song);
+    if (!_originalPlaylist.any((s) => s.id == song.id)) {
+      _originalPlaylist.add(song);
+    }
 
     if (targetIdx <= _currentIndex) {
       _currentIndex += 1;
@@ -604,19 +634,50 @@ class SoniqAudioHandler extends BaseAudioHandler {
     persistCurrentQueue();
   }
 
-  /// Clears upcoming songs in the queue while keeping currently playing song at index 0
-  void clearUpcomingQueue() {
-    if (_effectivePlaylist.isEmpty) return;
+  List<SongModel> _lastClearedUpcoming = [];
+  List<SongModel> get lastClearedUpcoming => List.unmodifiable(_lastClearedUpcoming);
+
+  /// Clears upcoming songs in the queue while keeping currently playing song at index 0.
+  /// Returns the cleared upcoming songs so they can be restored via Undo.
+  List<SongModel> clearUpcomingQueue() {
+    if (_effectivePlaylist.isEmpty) return [];
 
     final curr = currentSong;
+    List<SongModel> cleared;
+    if (_currentIndex < _effectivePlaylist.length - 1) {
+      cleared = _effectivePlaylist.sublist(_currentIndex + 1);
+    } else {
+      cleared = [];
+    }
+    _lastClearedUpcoming = List.from(cleared);
+
     if (curr != null) {
       _effectivePlaylist = [curr];
       _currentIndex = 0;
+      _originalPlaylist = [curr];
     } else {
       _effectivePlaylist.clear();
+      _originalPlaylist.clear();
       _currentIndex = -1;
     }
 
+    _updateQueueItems();
+    _broadcastPlaybackState();
+    persistCurrentQueue();
+    return cleared;
+  }
+
+  /// Restores the recently cleared upcoming queue back to its previous position
+  void restoreClearedUpcomingQueue() {
+    if (_lastClearedUpcoming.isEmpty) return;
+    final insertIdx = (_currentIndex + 1).clamp(0, _effectivePlaylist.length);
+    _effectivePlaylist.insertAll(insertIdx, _lastClearedUpcoming);
+    for (final s in _lastClearedUpcoming) {
+      if (!_originalPlaylist.any((o) => o.id == s.id)) {
+        _originalPlaylist.add(s);
+      }
+    }
+    _lastClearedUpcoming.clear();
     _updateQueueItems();
     _broadcastPlaybackState();
     persistCurrentQueue();
@@ -640,7 +701,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
   Future<void> persistCurrentQueue() async {
     try {
       final ids = _effectivePlaylist.map((s) => s.id).toList();
+      final origIds = _originalPlaylist.map((s) => s.id).toList();
       await _cacheService.setSetting('saved_queue_ids', ids);
+      await _cacheService.setSetting('saved_original_queue_ids', origIds);
       await _cacheService.setSetting('saved_queue_index', _currentIndex);
       await _cacheService.setSetting(
         'saved_queue_pos_ms',
@@ -669,7 +732,16 @@ class SoniqAudioHandler extends BaseAudioHandler {
             .toList();
 
         if (restored.isNotEmpty) {
-          _originalPlaylist = List.from(restored);
+          final savedOrigIds = _cacheService.getSetting('saved_original_queue_ids');
+          if (savedOrigIds is List && savedOrigIds.isNotEmpty) {
+            final orig = savedOrigIds
+                .map((id) => songMap[id])
+                .whereType<SongModel>()
+                .toList();
+            _originalPlaylist = orig.isNotEmpty ? orig : List.from(restored);
+          } else {
+            _originalPlaylist = List.from(restored);
+          }
           _effectivePlaylist = List.from(restored);
           final savedIdx = (_cacheService.getSetting(
             'saved_queue_index',
@@ -1241,6 +1313,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
     _updateQueueItems();
     _broadcastPlaybackState();
+    persistCurrentQueue();
   }
 
   @override

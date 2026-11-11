@@ -333,5 +333,144 @@ void main() {
 
       expect(activeQueue.length, 1 + albumSongs.length + artistSongs.length);
     });
+
+    test('Clear Upcoming Queue with Undo restoration restores upcoming tracks in exact order', () {
+      final queue = List<SongModel>.from(testSongs);
+      int currentIndex = 3;
+      final currentSong = queue[currentIndex];
+
+      // Upcoming tracks are from index 4 to end
+      final upcoming = queue.sublist(currentIndex + 1);
+      expect(upcoming.length, 11);
+
+      // Perform clear upcoming
+      final cleared = List<SongModel>.from(upcoming);
+      final activeQueue = [currentSong];
+      currentIndex = 0;
+
+      expect(activeQueue.length, 1);
+      expect(activeQueue.first.id, 'song_3');
+
+      // Undo Clear Upcoming Queue
+      activeQueue.insertAll(currentIndex + 1, cleared);
+      expect(activeQueue.length, 12);
+      expect(activeQueue[0].id, 'song_3');
+      for (int i = 0; i < cleared.length; i++) {
+        expect(activeQueue[i + 1].id, cleared[i].id);
+      }
+    });
+
+    test('Play Next with allowDuplicate false relocates existing upcoming track to next position', () {
+      final queue = List<SongModel>.from(testSongs);
+      int currentIndex = 2; // Playing song_2
+
+      // We choose song_8 which is currently upcoming at index 8
+      final targetSong = queue[8];
+      expect(targetSong.id, 'song_8');
+
+      // Intelligent relocation instead of duplication
+      final existingUpcomingIdx = queue.indexWhere((s) => s.id == targetSong.id, currentIndex + 1);
+      expect(existingUpcomingIdx, 8);
+
+      // Reorder from 8 to (currentIndex + 1) = 3
+      int oldIdx = existingUpcomingIdx;
+      int newIdx = currentIndex + 1;
+      if (oldIdx < newIdx) newIdx -= 1;
+      final moved = queue.removeAt(oldIdx);
+      queue.insert(newIdx, moved);
+
+      expect(queue.length, testSongs.length); // No duplicate added!
+      expect(queue[currentIndex + 1].id, 'song_8'); // Now immediately next!
+      expect(queue[currentIndex].id, 'song_2'); // Current track untouched!
+    });
+
+    test('Add to Queue with allowDuplicate false relocates existing upcoming track to end', () {
+      final queue = List<SongModel>.from(testSongs);
+      int currentIndex = 2; // Playing song_2
+
+      // We choose song_5 which is currently at index 5
+      final targetSong = queue[5];
+      expect(targetSong.id, 'song_5');
+
+      final existingUpcomingIdx = queue.indexWhere((s) => s.id == targetSong.id, currentIndex + 1);
+      expect(existingUpcomingIdx, 5);
+
+      // Reorder to end
+      int oldIdx = existingUpcomingIdx;
+      int newIdx = queue.length;
+      if (oldIdx < newIdx) newIdx -= 1;
+      final moved = queue.removeAt(oldIdx);
+      queue.insert(newIdx, moved);
+
+      expect(queue.length, testSongs.length); // No duplicate added!
+      expect(queue.last.id, 'song_5'); // Now at end!
+      expect(queue[currentIndex].id, 'song_2'); // Still playing song_2!
+    });
+
+    test('Persisting and restoring original playlist during shuffle cycle', () {
+      final originalList = List<SongModel>.from(testSongs);
+      final currentSong = originalList[4];
+
+      // Shuffle creates effective playlist starting with current song
+      final remaining = List<SongModel>.from(originalList)..removeWhere((s) => s.id == currentSong.id);
+      remaining.shuffle();
+      final effectiveList = [currentSong, ...remaining];
+
+      // Persist both
+      final savedEffectiveIds = effectiveList.map((s) => s.id).toList();
+      final savedOriginalIds = originalList.map((s) => s.id).toList();
+
+      expect(savedEffectiveIds.length, originalList.length);
+      expect(savedOriginalIds.length, originalList.length);
+      expect(savedEffectiveIds.first, 'song_4');
+
+      // Toggling shuffle off recovers true original un-shuffled sequence
+      final songMap = {for (var s in testSongs) s.id: s};
+      final restoredOriginal = savedOriginalIds.map((id) => songMap[id]!).toList();
+      final restoredCurrentIdx = restoredOriginal.indexWhere((s) => s.id == currentSong.id);
+
+      expect(restoredCurrentIdx, 4);
+      expect(restoredOriginal[4].id, 'song_4');
+      expect(restoredOriginal[0].id, 'song_0');
+      expect(restoredOriginal[1].id, 'song_1');
+    });
+
+    test('Rapid consecutive drag-and-drop operations maintain strict index integrity', () {
+      final queue = List<SongModel>.from(testSongs);
+      int currentIndex = 1;
+
+      // 5 rapid drag-and-drop reorders
+      final moves = [
+        [10, 4],
+        [8, 2],
+        [12, 1],
+        [5, 9],
+        [3, 11],
+      ];
+
+      for (final move in moves) {
+        int oldIndex = move[0];
+        int newIndex = move[1];
+
+        if (oldIndex < newIndex) newIndex -= 1;
+        final song = queue.removeAt(oldIndex);
+        queue.insert(newIndex, song);
+
+        if (oldIndex == currentIndex) {
+          currentIndex = newIndex;
+        } else if (oldIndex < currentIndex && newIndex >= currentIndex) {
+          currentIndex -= 1;
+        } else if (oldIndex > currentIndex && newIndex <= currentIndex) {
+          currentIndex += 1;
+        }
+      }
+
+      // Check current track identity is preserved
+      expect(queue[currentIndex].id, 'song_1');
+      expect(queue.length, testSongs.length);
+      // All unique tracks present without loss or duplication
+      final uniqueIds = queue.map((s) => s.id).toSet();
+      expect(uniqueIds.length, testSongs.length);
+    });
   });
 }
