@@ -5,6 +5,19 @@ import 'package:permission_handler/permission_handler.dart';
 class PermissionService {
   PermissionService._();
 
+  static Future<void> ensureNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final notifStatus = await Permission.notification.status;
+        if (!notifStatus.isGranted) {
+          await Permission.notification.request();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error ensuring notification permission: $e');
+    }
+  }
+
   static Future<bool> requestMediaPermissions() async {
     try {
       if (Platform.isAndroid) {

@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/services/audio_scanner_service.dart';
+import '../../../core/services/permission_service.dart';
+import '../../../core/services/artwork_cache_service.dart';
 import '../../../core/database/song_cache_service.dart';
 import '../../playlists/controllers/favorites_controller.dart';
 
@@ -84,6 +86,7 @@ class LibraryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    PermissionService.ensureNotificationPermission();
     _loadSavedSortOption();
     loadCachedSongs();
     debounce(searchQuery, (_) => applyFiltersAndSorting(), time: const Duration(milliseconds: 200));
@@ -111,6 +114,7 @@ class LibraryController extends GetxController {
       allSongs.assignAll(cached);
       _rebuildGroupings();
       applyFiltersAndSorting();
+      ArtworkCacheService().prewarmArtworkCache(allSongs);
     } else {
       scanLibrary();
     }
@@ -131,6 +135,7 @@ class LibraryController extends GetxController {
       allSongs.assignAll(songs);
       _rebuildGroupings();
       applyFiltersAndSorting();
+      ArtworkCacheService().prewarmArtworkCache(allSongs);
 
       if (Get.isRegistered<FavoritesController>()) {
         Get.find<FavoritesController>().loadFavorites();

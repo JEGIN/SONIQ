@@ -121,4 +121,40 @@ class ArtworkCacheService {
 
     return null;
   }
+
+  /// Synchronously returns a local file URI if already cached on disk,
+  /// or returns the fallback artwork URI immediately to keep car browsing 60fps fast.
+  Uri? getCachedArtworkUri(String songId) {
+    if (_cacheDir != null) {
+      final diskFile = File('${_cacheDir!.path}/art_$songId.jpg');
+      if (diskFile.existsSync()) {
+        return Uri.file(diskFile.path);
+      }
+    }
+    if (_fallbackArtFile != null && _fallbackArtFile!.existsSync()) {
+      return Uri.file(_fallbackArtFile!.path);
+    }
+    return null;
+  }
+
+  /// Background pre-warmer that ensures artwork is written to disk for car browsing
+  void prewarmArtworkCache(List<dynamic> songs, {int maxCount = 200}) {
+    Future.microtask(() async {
+      int processed = 0;
+      for (final s in songs) {
+        if (processed >= maxCount) break;
+        final String songId = s.id.toString();
+        if (_cacheDir != null) {
+          final diskFile = File('${_cacheDir!.path}/art_$songId.jpg');
+          if (!diskFile.existsSync()) {
+            await getArtworkBytes(songId);
+            processed++;
+            if (processed % 10 == 0) {
+              await Future.delayed(const Duration(milliseconds: 30));
+            }
+          }
+        }
+      }
+    });
+  }
 }

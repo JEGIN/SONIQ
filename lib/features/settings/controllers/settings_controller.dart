@@ -87,10 +87,12 @@ class SettingsController extends GetxController {
       final targetApkPath = '${tempDir.path}/SONIQ_Music_Player.apk';
       final targetFile = File(targetApkPath);
 
-      final sourceLength = await sourceFile.length();
-      if (!await targetFile.exists() || await targetFile.length() != sourceLength) {
-        await sourceFile.copy(targetApkPath);
+      if (await targetFile.exists()) {
+        try {
+          await targetFile.delete();
+        } catch (_) {}
       }
+      await sourceFile.copy(targetApkPath);
 
       // ignore: deprecated_member_use
       await Share.shareXFiles(

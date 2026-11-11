@@ -106,6 +106,15 @@ class AudioPlayerController extends GetxController {
     queue.assignAll(audioHandler.currentPlaylist);
   }
 
+  /// Plays an entire song collection from the beginning (Play All),
+  /// or randomizes the sequence with a true random first track (Shuffle All).
+  Future<void> playAll(List<SongModel> songs, {bool shuffle = false}) async {
+    if (songs.isEmpty) return;
+    await audioHandler.playSongList(songs, 0, shuffle: shuffle);
+    currentSong.value = audioHandler.currentSong;
+    queue.assignAll(audioHandler.currentPlaylist);
+  }
+
   /// Play / Pause toggle
   Future<void> playPause() async {
     if (currentSong.value == null && queue.isNotEmpty) {

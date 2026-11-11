@@ -17,10 +17,19 @@ Future<SoniqAudioHandler> initAudioHandler() async {
       androidNotificationChannelId: 'com.soniq.soniq.channel.audio',
       androidNotificationChannelName: 'SONIQ Playback',
       androidNotificationChannelDescription: 'SONIQ High Fidelity Offline Music Player',
+      androidNotificationIcon: 'mipmap/ic_launcher',
       androidNotificationOngoing: false,
       androidStopForegroundOnPause: false,
       androidShowNotificationBadge: true,
       notificationColor: const Color(0xFFFF2A85),
+      androidBrowsableRootExtras: {
+        'android.media.browse.CONTENT_STYLE_SUPPORTED': true,
+        'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+        'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+        'android.auto.media.CONTENT_STYLE_SUPPORTED': true,
+        'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 1,
+        'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+      },
     ),
   );
 }
@@ -142,12 +151,18 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
   void _broadcastPlaybackState() {
     final playing = _player.playing;
+    final isFav = currentSong?.isFavorite ?? false;
+
     playbackState.add(playbackState.value.copyWith(
       controls: [
         MediaControl.skipToPrevious,
         if (playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
-        MediaControl.stop,
+        MediaControl.custom(
+          androidIcon: isFav ? 'drawable/ic_favorite_filled' : 'drawable/ic_favorite_border',
+          label: isFav ? 'Unfavorite' : 'Favorite',
+          name: 'toggle_favorite',
+        ),
       ],
       systemActions: const {
         MediaAction.seek,
@@ -193,10 +208,17 @@ class SoniqAudioHandler extends BaseAudioHandler {
     final targetSong = _originalPlaylist[clampedIdx];
 
     if (_isShuffle) {
-      final remaining = List<SongModel>.from(_originalPlaylist)..removeAt(clampedIdx);
-      remaining.shuffle(Random());
-      _effectivePlaylist = [targetSong, ...remaining];
-      _currentIndex = 0;
+      if (initialIndex == 0 && shuffle == true) {
+        // True random shuffle for "Shuffle All"
+        final shuffled = List<SongModel>.from(_originalPlaylist)..shuffle(Random());
+        _effectivePlaylist = shuffled;
+        _currentIndex = 0;
+      } else {
+        final remaining = List<SongModel>.from(_originalPlaylist)..removeAt(clampedIdx);
+        remaining.shuffle(Random());
+        _effectivePlaylist = [targetSong, ...remaining];
+        _currentIndex = 0;
+      }
     } else {
       _effectivePlaylist = List.from(_originalPlaylist);
       _currentIndex = clampedIdx;
@@ -526,31 +548,160 @@ class SoniqAudioHandler extends BaseAudioHandler {
     }
   }
 
-  MediaItem _songToMediaItem(SongModel song, {Uri? artUriOverride}) {
-    Uri? artUri = artUriOverride;
-    if (artUri == null && _artworkService.fallbackArtFile != null) {
-      final diskFile = File('${_artworkService.fallbackArtFile!.parent.path}/art_${song.id}.jpg');
-      if (diskFile.existsSync()) {
-        artUri = Uri.file(diskFile.path);
-      } else {
-        artUri = Uri.file(_artworkService.fallbackArtFile!.path);
-      }
-    }
+  MediaItem _songToMediaItem(
+    SongModel song, {
+    Uri? artUriOverride,
+    String? idOverride,
+    Map<String, dynamic>? additionalExtras,
+  }) {
+    final artUri = artUriOverride ?? _artworkService.getCachedArtworkUri(song.id);
 
     return MediaItem(
-      id: song.id,
+      id: idOverride ?? song.id,
       album: song.album,
       title: song.title,
       artist: song.artist,
       duration: Duration(milliseconds: song.durationMs),
       artUri: artUri,
       playable: true,
+      displayTitle: song.title,
+      displaySubtitle: song.artist,
+      displayDescription: song.album,
       extras: {
         'dataPath': song.dataPath,
         'isFavorite': song.isFavorite,
         'fileExtension': song.fileExtension,
+        'originalSongId': song.id,
+        'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+        'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+        ...?additionalExtras,
       },
     );
+  }
+
+  SongModel? _findSongByMediaItem(MediaItem item) {
+    final originalId = item.extras?['originalSongId'] as String? ?? item.id;
+    return _cacheService.getCachedSongs().where((s) => s.id == originalId).firstOrNull ??
+        _effectivePlaylist.where((s) => s.id == originalId).firstOrNull;
+  }
+
+  @override
+  Future<void> addQueueItem(MediaItem mediaItem) async {
+    final song = _findSongByMediaItem(mediaItem);
+    if (song != null) {
+      addToQueue(song);
+    }
+  }
+
+  @override
+  Future<void> addQueueItems(List<MediaItem> mediaItems) async {
+    final songs = <SongModel>[];
+    for (final item in mediaItems) {
+      final s = _findSongByMediaItem(item);
+      if (s != null) songs.add(s);
+    }
+    if (songs.isNotEmpty) {
+      addMultipleToQueue(songs);
+    }
+  }
+
+  @override
+  Future<void> insertQueueItem(int index, MediaItem mediaItem) async {
+    final song = _findSongByMediaItem(mediaItem);
+    if (song != null) {
+      insertIntoQueue(index, song);
+    }
+  }
+
+  @override
+  Future<void> removeQueueItem(MediaItem mediaItem) async {
+    final originalId = mediaItem.extras?['originalSongId'] as String? ?? mediaItem.id;
+    final idx = _effectivePlaylist.indexWhere((s) => s.id == originalId);
+    if (idx >= 0) {
+      removeFromQueue(idx);
+    }
+  }
+
+  @override
+  Future<void> removeQueueItemAt(int index) async {
+    removeFromQueue(index);
+  }
+
+  @override
+  Future<void> updateQueue(List<MediaItem> queue) async {
+    final cachedSongs = _cacheService.getCachedSongs();
+    final songMap = {for (var s in cachedSongs) s.id: s};
+    final newSongs = <SongModel>[];
+    for (final item in queue) {
+      final id = item.extras?['originalSongId'] as String? ?? item.id;
+      final s = songMap[id] ?? _effectivePlaylist.where((p) => p.id == id).firstOrNull;
+      if (s != null) newSongs.add(s);
+    }
+    if (newSongs.isNotEmpty) {
+      _effectivePlaylist = newSongs;
+      _updateQueueItems();
+      _broadcastPlaybackState();
+      persistCurrentQueue();
+    }
+  }
+
+  @override
+  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async {
+    final cachedSongs = _cacheService.getCachedSongs();
+    switch (name) {
+      case 'play_all':
+        if (cachedSongs.isNotEmpty) {
+          await playSongList(cachedSongs, 0, shuffle: false);
+        }
+        return true;
+      case 'shuffle_all':
+        if (cachedSongs.isNotEmpty) {
+          await playSongList(cachedSongs, 0, shuffle: true);
+        }
+        return true;
+      case 'toggle_favorite':
+        final songId = extras?['songId'] as String? ?? currentSong?.id;
+        if (songId != null) {
+          final s = cachedSongs.where((x) => x.id == songId).firstOrNull ?? currentSong;
+          if (s != null) {
+            await toggleFavorite(s);
+            return true;
+          }
+        }
+        return false;
+      case 'play_next':
+        final songId = extras?['songId'] as String?;
+        if (songId != null) {
+          final s = cachedSongs.where((x) => x.id == songId).firstOrNull;
+          if (s != null) {
+            playNext(s);
+            return true;
+          }
+        }
+        return false;
+      case 'add_to_queue':
+        final songId = extras?['songId'] as String?;
+        if (songId != null) {
+          final s = cachedSongs.where((x) => x.id == songId).firstOrNull;
+          if (s != null) {
+            addToQueue(s);
+            return true;
+          }
+        }
+        return false;
+      default:
+        return super.customAction(name, extras);
+    }
+  }
+
+  /// Toggles favorite status for a song across Hive cache and MediaSession
+  Future<void> toggleFavorite(SongModel song) async {
+    await _cacheService.toggleFavorite(song.id);
+    song.isFavorite = !song.isFavorite;
+    if (currentSong?.id == song.id) {
+      mediaItem.add(_songToMediaItem(song));
+      _broadcastPlaybackState();
+    }
   }
 
   @override
@@ -771,6 +922,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
   @override
   Future<List<MediaItem>> getChildren(String parentMediaId, [Map<String, dynamic>? options]) async {
     final cachedSongs = _cacheService.getCachedSongs();
+    final fallbackArt = cachedSongs.firstOrNull != null
+        ? _artworkService.getCachedArtworkUri(cachedSongs.first.id)
+        : null;
 
     // 1. Root categories for Android Auto / In-Car Infotainment
     if (parentMediaId == AudioService.browsableRootId ||
@@ -783,56 +937,89 @@ class SoniqAudioHandler extends BaseAudioHandler {
       final artists = cachedSongs.map((s) => s.artist).toSet().length;
       final albums = cachedSongs.map((s) => s.album).toSet().length;
 
-      return [
-        MediaItem(
-          id: 'category_current_queue',
-          title: 'Current Queue',
-          displaySubtitle: '${_effectivePlaylist.length} tracks queued • Active order',
-          playable: false,
-        ),
+      final categories = <MediaItem>[];
+
+      // Current Queue - only displayed when there is an active playback queue
+      if (_effectivePlaylist.isNotEmpty) {
+        final currentArt = currentSong != null
+            ? _artworkService.getCachedArtworkUri(currentSong!.id)
+            : fallbackArt;
+        categories.add(
+          MediaItem(
+            id: 'category_current_queue',
+            title: 'Current Queue',
+            displaySubtitle: '${_effectivePlaylist.length} tracks queued • Active playback',
+            artUri: currentArt,
+            playable: false,
+          ),
+        );
+      }
+
+      categories.addAll([
         MediaItem(
           id: 'category_all_songs',
           title: 'All Songs',
           displaySubtitle: '${cachedSongs.length} tracks • Offline Library',
-          playable: false,
-        ),
-        MediaItem(
-          id: 'category_recently_played',
-          title: 'Recently Played',
-          displaySubtitle: 'Recent listening history',
-          playable: false,
-        ),
-        MediaItem(
-          id: 'category_recently_added',
-          title: 'Recently Added',
-          displaySubtitle: 'Newest downloads',
+          artUri: fallbackArt,
           playable: false,
         ),
         MediaItem(
           id: 'category_favorites',
           title: 'Favorites',
           displaySubtitle: '$favCount favorite tracks',
+          artUri: fallbackArt,
+          playable: false,
+        ),
+        MediaItem(
+          id: 'category_recently_played',
+          title: 'Recently Played',
+          displaySubtitle: 'Recent listening history',
+          artUri: fallbackArt,
+          playable: false,
+        ),
+        MediaItem(
+          id: 'category_recently_added',
+          title: 'Recently Added',
+          displaySubtitle: 'Newest downloads',
+          artUri: fallbackArt,
           playable: false,
         ),
         MediaItem(
           id: 'category_playlists',
           title: 'Playlists',
           displaySubtitle: '${playlists.length} playlists',
+          artUri: fallbackArt,
           playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 2,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 2,
+          },
         ),
         MediaItem(
           id: 'category_artists',
           title: 'Artists',
-          displaySubtitle: '$artists local artists',
+          displaySubtitle: '$artists artists',
+          artUri: fallbackArt,
           playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 2,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 2,
+          },
         ),
         MediaItem(
           id: 'category_albums',
           title: 'Albums',
           displaySubtitle: '$albums albums',
+          artUri: fallbackArt,
           playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 2,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 2,
+          },
         ),
-      ];
+      ]);
+
+      return categories;
     }
 
     // 2. Current Queue
@@ -840,12 +1027,80 @@ class SoniqAudioHandler extends BaseAudioHandler {
       return _effectivePlaylist.map((s) => _songToMediaItem(s)).toList();
     }
 
-    // 3. All Songs
+    // 3. All Songs Container (with top-level Play All and Shuffle All)
     if (parentMediaId == 'category_all_songs') {
-      return cachedSongs.map((s) => _songToMediaItem(s)).toList();
+      final items = <MediaItem>[];
+      if (cachedSongs.isNotEmpty) {
+        items.add(
+          MediaItem(
+            id: 'action_play_all_songs',
+            title: '▶  Play All',
+            displaySubtitle: 'Play all ${cachedSongs.length} songs in library order',
+            artUri: fallbackArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_songs',
+            title: '🔀  Shuffle All',
+            displaySubtitle: 'Shuffle and play all ${cachedSongs.length} songs',
+            artUri: fallbackArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+      }
+      items.addAll(cachedSongs.map((s) => _songToMediaItem(s, idOverride: 'all_song_${s.id}')));
+      return items;
     }
 
-    // 3. Recently Played
+    // 4. Favorites Container
+    if (parentMediaId == 'category_favorites') {
+      final favIds = _cacheService.getFavoriteSongIds().toSet();
+      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
+      final items = <MediaItem>[];
+      if (favs.isNotEmpty) {
+        final favArt = _artworkService.getCachedArtworkUri(favs.first.id);
+        items.add(
+          MediaItem(
+            id: 'action_play_all_favorites',
+            title: '▶  Play All Favorites',
+            displaySubtitle: 'Play all ${favs.length} favorite tracks',
+            artUri: favArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_favorites',
+            title: '🔀  Shuffle Favorites',
+            displaySubtitle: 'Shuffle ${favs.length} favorite tracks',
+            artUri: favArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.addAll(favs.map((s) => _songToMediaItem(s, idOverride: 'fav_song_${s.id}')));
+      }
+      return items;
+    }
+
+    // 5. Recently Played Container
     if (parentMediaId == 'category_recently_played') {
       final recentIds = _cacheService.getRecentlyPlayedSongIds(limit: 50);
       final songMap = {for (var s in cachedSongs) s.id: s};
@@ -854,35 +1109,107 @@ class SoniqAudioHandler extends BaseAudioHandler {
         final s = songMap[id];
         if (s != null) recentSongs.add(s);
       }
-      return recentSongs.map((s) => _songToMediaItem(s)).toList();
+      final items = <MediaItem>[];
+      if (recentSongs.isNotEmpty) {
+        final rArt = _artworkService.getCachedArtworkUri(recentSongs.first.id);
+        items.add(
+          MediaItem(
+            id: 'action_play_all_recent',
+            title: '▶  Play All Recents',
+            displaySubtitle: 'Play ${recentSongs.length} recently played tracks',
+            artUri: rArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_recent',
+            title: '🔀  Shuffle Recents',
+            displaySubtitle: 'Shuffle ${recentSongs.length} recently played tracks',
+            artUri: rArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.addAll(recentSongs.map((s) => _songToMediaItem(s, idOverride: 'recent_song_${s.id}')));
+      }
+      return items;
     }
 
-    // 4. Recently Added
+    // 6. Recently Added Container
     if (parentMediaId == 'category_recently_added') {
       final sorted = List<SongModel>.from(cachedSongs)
         ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
-      return sorted.take(50).map((s) => _songToMediaItem(s)).toList();
+      final recentAdded = sorted.take(50).toList();
+      final items = <MediaItem>[];
+      if (recentAdded.isNotEmpty) {
+        final raArt = _artworkService.getCachedArtworkUri(recentAdded.first.id);
+        items.add(
+          MediaItem(
+            id: 'action_play_all_recent_added',
+            title: '▶  Play All New Tracks',
+            displaySubtitle: 'Play ${recentAdded.length} newest additions',
+            artUri: raArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_recent_added',
+            title: '🔀  Shuffle New Tracks',
+            displaySubtitle: 'Shuffle ${recentAdded.length} newest additions',
+            artUri: raArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.addAll(recentAdded.map((s) => _songToMediaItem(s, idOverride: 'recent_added_song_${s.id}')));
+      }
+      return items;
     }
 
-    // 5. Favorites
-    if (parentMediaId == 'category_favorites') {
-      final favIds = _cacheService.getFavoriteSongIds().toSet();
-      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
-      return favs.map((s) => _songToMediaItem(s)).toList();
-    }
-
-    // 6. Playlists Top-Level
+    // 7. Playlists Top-Level
     if (parentMediaId == 'category_playlists') {
       final playlists = _cacheService.getPlaylists();
-      return playlists.map((p) => MediaItem(
-        id: 'playlist_${p.id}',
-        title: p.name,
-        displaySubtitle: '${p.songCount} songs',
-        playable: false,
-      )).toList();
+      final songMap = {for (var s in cachedSongs) s.id: s};
+      return playlists.map((p) {
+        Uri? pArt;
+        for (final id in p.songIds) {
+          final s = songMap[id];
+          if (s != null) {
+            pArt = _artworkService.getCachedArtworkUri(s.id);
+            break;
+          }
+        }
+        return MediaItem(
+          id: 'playlist_${p.id}',
+          title: p.name,
+          displaySubtitle: '${p.songCount} songs',
+          artUri: pArt ?? fallbackArt,
+          playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 1,
+          },
+        );
+      }).toList();
     }
 
-    // 6b. Specific Playlist Content
+    // 7b. Specific Playlist Content
     if (parentMediaId.startsWith('playlist_')) {
       final pId = parentMediaId.substring('playlist_'.length);
       final playlists = _cacheService.getPlaylists();
@@ -894,45 +1221,165 @@ class SoniqAudioHandler extends BaseAudioHandler {
           final s = songMap[id];
           if (s != null) pSongs.add(s);
         }
-        return pSongs.map((s) => _songToMediaItem(s)).toList();
+        final items = <MediaItem>[];
+        if (pSongs.isNotEmpty) {
+          final plArt = _artworkService.getCachedArtworkUri(pSongs.first.id);
+          items.add(
+            MediaItem(
+              id: 'action_play_all_playlist_$pId',
+              title: '▶  Play Playlist',
+              displaySubtitle: 'Play all ${pSongs.length} songs in "${p.name}"',
+              artUri: plArt,
+              playable: true,
+              extras: const {
+                'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+                'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              },
+            ),
+          );
+          items.add(
+            MediaItem(
+              id: 'action_shuffle_all_playlist_$pId',
+              title: '🔀  Shuffle Playlist',
+              displaySubtitle: 'Shuffle all ${pSongs.length} songs in "${p.name}"',
+              artUri: plArt,
+              playable: true,
+              extras: const {
+                'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+                'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              },
+            ),
+          );
+          items.addAll(pSongs.map((s) => _songToMediaItem(s, idOverride: 'playlist_song_$pId:::${s.id}')));
+        }
+        return items;
       }
       return [];
     }
 
-    // 7. Artists Top-Level
+    // 8. Artists Top-Level
     if (parentMediaId == 'category_artists') {
-      final artists = cachedSongs.map((s) => s.artist).toSet().toList()..sort();
-      return artists.map((a) => MediaItem(
-        id: 'artist_$a',
-        title: a,
-        displaySubtitle: 'Artist',
-        playable: false,
-      )).toList();
+      final artistMap = <String, List<SongModel>>{};
+      for (final s in cachedSongs) {
+        artistMap.putIfAbsent(s.artist, () => []).add(s);
+      }
+      final sortedArtists = artistMap.keys.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      return sortedArtists.map((a) {
+        final songs = artistMap[a]!;
+        final art = _artworkService.getCachedArtworkUri(songs.first.id);
+        return MediaItem(
+          id: 'artist_$a',
+          title: a,
+          displaySubtitle: '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
+          artUri: art ?? fallbackArt,
+          playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 1,
+          },
+        );
+      }).toList();
     }
 
-    // 7b. Specific Artist Tracks
+    // 8b. Specific Artist Tracks
     if (parentMediaId.startsWith('artist_')) {
       final artistName = parentMediaId.substring('artist_'.length);
       final aSongs = cachedSongs.where((s) => s.artist == artistName).toList();
-      return aSongs.map((s) => _songToMediaItem(s)).toList();
+      final items = <MediaItem>[];
+      if (aSongs.isNotEmpty) {
+        final aArt = _artworkService.getCachedArtworkUri(aSongs.first.id);
+        items.add(
+          MediaItem(
+            id: 'action_play_all_artist_$artistName',
+            title: '▶  Play All by $artistName',
+            displaySubtitle: 'Play all ${aSongs.length} songs',
+            artUri: aArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_artist_$artistName',
+            title: '🔀  Shuffle Artist',
+            displaySubtitle: 'Shuffle all ${aSongs.length} songs by $artistName',
+            artUri: aArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.addAll(aSongs.map((s) => _songToMediaItem(s, idOverride: 'artist_song_$artistName:::${s.id}')));
+      }
+      return items;
     }
 
-    // 8. Albums Top-Level
+    // 9. Albums Top-Level
     if (parentMediaId == 'category_albums') {
-      final albums = cachedSongs.map((s) => s.album).toSet().toList()..sort();
-      return albums.map((a) => MediaItem(
-        id: 'album_$a',
-        title: a,
-        displaySubtitle: 'Album',
-        playable: false,
-      )).toList();
+      final albumMap = <String, List<SongModel>>{};
+      for (final s in cachedSongs) {
+        albumMap.putIfAbsent(s.album, () => []).add(s);
+      }
+      final sortedAlbums = albumMap.keys.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      return sortedAlbums.map((alb) {
+        final songs = albumMap[alb]!;
+        final art = _artworkService.getCachedArtworkUri(songs.first.id);
+        final artist = songs.first.artist;
+        return MediaItem(
+          id: 'album_$alb',
+          title: alb,
+          displaySubtitle: '$artist • ${songs.length} tracks',
+          artUri: art ?? fallbackArt,
+          playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 1,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 1,
+          },
+        );
+      }).toList();
     }
 
-    // 8b. Specific Album Tracks
+    // 9b. Specific Album Tracks
     if (parentMediaId.startsWith('album_')) {
       final albumName = parentMediaId.substring('album_'.length);
       final alSongs = cachedSongs.where((s) => s.album == albumName).toList();
-      return alSongs.map((s) => _songToMediaItem(s)).toList();
+      final items = <MediaItem>[];
+      if (alSongs.isNotEmpty) {
+        final alArt = _artworkService.getCachedArtworkUri(alSongs.first.id);
+        items.add(
+          MediaItem(
+            id: 'action_play_all_album_$albumName',
+            title: '▶  Play Album',
+            displaySubtitle: 'Play all ${alSongs.length} tracks in "$albumName"',
+            artUri: alArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.add(
+          MediaItem(
+            id: 'action_shuffle_all_album_$albumName',
+            title: '🔀  Shuffle Album',
+            displaySubtitle: 'Shuffle all ${alSongs.length} tracks in "$albumName"',
+            artUri: alArt,
+            playable: true,
+            extras: const {
+              'android.media.browse.CONTENT_STYLE_PLAYABLE_HINT': 1,
+              'android.auto.media.CONTENT_STYLE_PLAYABLE_HINT': 1,
+            },
+          ),
+        );
+        items.addAll(alSongs.map((s) => _songToMediaItem(s, idOverride: 'album_song_$albumName:::${s.id}')));
+      }
+      return items;
     }
 
     return [];
@@ -941,8 +1388,21 @@ class SoniqAudioHandler extends BaseAudioHandler {
   @override
   Future<MediaItem?> getMediaItem(String mediaId) async {
     final cachedSongs = _cacheService.getCachedSongs();
+    String targetId = mediaId;
+    if (targetId.startsWith('all_song_')) {
+      targetId = targetId.substring('all_song_'.length);
+    } else if (targetId.startsWith('fav_song_')) {
+      targetId = targetId.substring('fav_song_'.length);
+    } else if (targetId.startsWith('recent_song_')) {
+      targetId = targetId.substring('recent_song_'.length);
+    } else if (targetId.startsWith('recent_added_song_')) {
+      targetId = targetId.substring('recent_added_song_'.length);
+    } else if (targetId.contains(':::')) {
+      targetId = targetId.split(':::').last;
+    }
+
     for (final s in cachedSongs) {
-      if (s.id == mediaId) return _songToMediaItem(s);
+      if (s.id == targetId) return _songToMediaItem(s);
     }
     return null;
   }
@@ -952,25 +1412,30 @@ class SoniqAudioHandler extends BaseAudioHandler {
     final cachedSongs = _cacheService.getCachedSongs();
     if (cachedSongs.isEmpty) return;
 
-    if (mediaId == 'category_current_queue') {
-      if (_effectivePlaylist.isNotEmpty) {
-        await play();
-      }
+    // A. Direct Play All / Shuffle All Container Actions
+    if (mediaId == 'action_play_all_songs' || mediaId == 'category_all_songs') {
+      await playSongList(cachedSongs, 0, shuffle: false);
+      return;
+    }
+    if (mediaId == 'action_shuffle_all_songs') {
+      await playSongList(cachedSongs, 0, shuffle: true);
       return;
     }
 
-    // If the song is already in the current active queue, jump to it without resetting the queue
-    final inQueueIdx = _effectivePlaylist.indexWhere((s) => s.id == mediaId);
-    if (inQueueIdx >= 0) {
-      await skipToQueueItem(inQueueIdx);
+    if (mediaId == 'action_play_all_favorites' || mediaId == 'category_favorites') {
+      final favIds = _cacheService.getFavoriteSongIds().toSet();
+      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
+      if (favs.isNotEmpty) await playSongList(favs, 0, shuffle: false);
+      return;
+    }
+    if (mediaId == 'action_shuffle_all_favorites') {
+      final favIds = _cacheService.getFavoriteSongIds().toSet();
+      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
+      if (favs.isNotEmpty) await playSongList(favs, 0, shuffle: true);
       return;
     }
 
-    if (mediaId == 'category_all_songs') {
-      await playSongList(cachedSongs, 0);
-      return;
-    }
-    if (mediaId == 'category_recently_played') {
+    if (mediaId == 'action_play_all_recent' || mediaId == 'category_recently_played') {
       final recentIds = _cacheService.getRecentlyPlayedSongIds(limit: 50);
       final songMap = {for (var s in cachedSongs) s.id: s};
       final recentSongs = <SongModel>[];
@@ -978,22 +1443,40 @@ class SoniqAudioHandler extends BaseAudioHandler {
         final s = songMap[id];
         if (s != null) recentSongs.add(s);
       }
-      if (recentSongs.isNotEmpty) await playSongList(recentSongs, 0);
+      if (recentSongs.isNotEmpty) await playSongList(recentSongs, 0, shuffle: false);
       return;
     }
-    if (mediaId == 'category_recently_added') {
-      final sorted = List<SongModel>.from(cachedSongs)..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
-      if (sorted.isNotEmpty) await playSongList(sorted, 0);
+    if (mediaId == 'action_shuffle_all_recent') {
+      final recentIds = _cacheService.getRecentlyPlayedSongIds(limit: 50);
+      final songMap = {for (var s in cachedSongs) s.id: s};
+      final recentSongs = <SongModel>[];
+      for (final id in recentIds) {
+        final s = songMap[id];
+        if (s != null) recentSongs.add(s);
+      }
+      if (recentSongs.isNotEmpty) await playSongList(recentSongs, 0, shuffle: true);
       return;
     }
-    if (mediaId == 'category_favorites') {
-      final favIds = _cacheService.getFavoriteSongIds().toSet();
-      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
-      if (favs.isNotEmpty) await playSongList(favs, 0);
+
+    if (mediaId == 'action_play_all_recent_added' || mediaId == 'category_recently_added') {
+      final sorted = List<SongModel>.from(cachedSongs)
+        ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+      final recentAdded = sorted.take(50).toList();
+      if (recentAdded.isNotEmpty) await playSongList(recentAdded, 0, shuffle: false);
       return;
     }
-    if (mediaId.startsWith('playlist_')) {
-      final pId = mediaId.substring('playlist_'.length);
+    if (mediaId == 'action_shuffle_all_recent_added') {
+      final sorted = List<SongModel>.from(cachedSongs)
+        ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+      final recentAdded = sorted.take(50).toList();
+      if (recentAdded.isNotEmpty) await playSongList(recentAdded, 0, shuffle: true);
+      return;
+    }
+
+    if (mediaId.startsWith('action_play_all_playlist_') || (mediaId.startsWith('playlist_') && !mediaId.contains(':::'))) {
+      final pId = mediaId.startsWith('action_play_all_playlist_')
+          ? mediaId.substring('action_play_all_playlist_'.length)
+          : mediaId.substring('playlist_'.length);
       final playlists = _cacheService.getPlaylists();
       final p = playlists.where((pl) => pl.id == pId).firstOrNull;
       if (p != null) {
@@ -1003,23 +1486,156 @@ class SoniqAudioHandler extends BaseAudioHandler {
           final s = songMap[id];
           if (s != null) pSongs.add(s);
         }
-        if (pSongs.isNotEmpty) await playSongList(pSongs, 0);
+        if (pSongs.isNotEmpty) await playSongList(pSongs, 0, shuffle: false);
       }
       return;
     }
-    if (mediaId.startsWith('album_')) {
-      final albumName = mediaId.substring('album_'.length);
-      final alSongs = cachedSongs.where((s) => s.album == albumName).toList();
-      if (alSongs.isNotEmpty) await playSongList(alSongs, 0);
-      return;
-    }
-    if (mediaId.startsWith('artist_')) {
-      final artistName = mediaId.substring('artist_'.length);
-      final aSongs = cachedSongs.where((s) => s.artist == artistName).toList();
-      if (aSongs.isNotEmpty) await playSongList(aSongs, 0);
+    if (mediaId.startsWith('action_shuffle_all_playlist_')) {
+      final pId = mediaId.substring('action_shuffle_all_playlist_'.length);
+      final playlists = _cacheService.getPlaylists();
+      final p = playlists.where((pl) => pl.id == pId).firstOrNull;
+      if (p != null) {
+        final songMap = {for (var s in cachedSongs) s.id: s};
+        final pSongs = <SongModel>[];
+        for (final id in p.songIds) {
+          final s = songMap[id];
+          if (s != null) pSongs.add(s);
+        }
+        if (pSongs.isNotEmpty) await playSongList(pSongs, 0, shuffle: true);
+      }
       return;
     }
 
+    if (mediaId.startsWith('action_play_all_album_') || (mediaId.startsWith('album_') && !mediaId.contains(':::'))) {
+      final albumName = mediaId.startsWith('action_play_all_album_')
+          ? mediaId.substring('action_play_all_album_'.length)
+          : mediaId.substring('album_'.length);
+      final alSongs = cachedSongs.where((s) => s.album == albumName).toList();
+      if (alSongs.isNotEmpty) await playSongList(alSongs, 0, shuffle: false);
+      return;
+    }
+    if (mediaId.startsWith('action_shuffle_all_album_')) {
+      final albumName = mediaId.substring('action_shuffle_all_album_'.length);
+      final alSongs = cachedSongs.where((s) => s.album == albumName).toList();
+      if (alSongs.isNotEmpty) await playSongList(alSongs, 0, shuffle: true);
+      return;
+    }
+
+    if (mediaId.startsWith('action_play_all_artist_') || (mediaId.startsWith('artist_') && !mediaId.contains(':::'))) {
+      final artistName = mediaId.startsWith('action_play_all_artist_')
+          ? mediaId.substring('action_play_all_artist_'.length)
+          : mediaId.substring('artist_'.length);
+      final aSongs = cachedSongs.where((s) => s.artist == artistName).toList();
+      if (aSongs.isNotEmpty) await playSongList(aSongs, 0, shuffle: false);
+      return;
+    }
+    if (mediaId.startsWith('action_shuffle_all_artist_')) {
+      final artistName = mediaId.substring('action_shuffle_all_artist_'.length);
+      final aSongs = cachedSongs.where((s) => s.artist == artistName).toList();
+      if (aSongs.isNotEmpty) await playSongList(aSongs, 0, shuffle: true);
+      return;
+    }
+
+    // B. Contextual Individual Song Selections
+    if (mediaId.startsWith('all_song_')) {
+      final songId = mediaId.substring('all_song_'.length);
+      final idx = cachedSongs.indexWhere((s) => s.id == songId);
+      if (idx >= 0) await playSongList(cachedSongs, idx);
+      return;
+    }
+
+    if (mediaId.startsWith('fav_song_')) {
+      final songId = mediaId.substring('fav_song_'.length);
+      final favIds = _cacheService.getFavoriteSongIds().toSet();
+      final favs = cachedSongs.where((s) => favIds.contains(s.id) || s.isFavorite).toList();
+      final idx = favs.indexWhere((s) => s.id == songId);
+      if (idx >= 0) await playSongList(favs, idx);
+      return;
+    }
+
+    if (mediaId.startsWith('recent_song_')) {
+      final songId = mediaId.substring('recent_song_'.length);
+      final recentIds = _cacheService.getRecentlyPlayedSongIds(limit: 50);
+      final songMap = {for (var s in cachedSongs) s.id: s};
+      final recentSongs = <SongModel>[];
+      for (final id in recentIds) {
+        final s = songMap[id];
+        if (s != null) recentSongs.add(s);
+      }
+      final idx = recentSongs.indexWhere((s) => s.id == songId);
+      if (idx >= 0) await playSongList(recentSongs, idx);
+      return;
+    }
+
+    if (mediaId.startsWith('recent_added_song_')) {
+      final songId = mediaId.substring('recent_added_song_'.length);
+      final sorted = List<SongModel>.from(cachedSongs)
+        ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+      final recentAdded = sorted.take(50).toList();
+      final idx = recentAdded.indexWhere((s) => s.id == songId);
+      if (idx >= 0) await playSongList(recentAdded, idx);
+      return;
+    }
+
+    if (mediaId.startsWith('album_song_')) {
+      final parts = mediaId.substring('album_song_'.length).split(':::');
+      if (parts.length >= 2) {
+        final albumName = parts[0];
+        final songId = parts[1];
+        final alSongs = cachedSongs.where((s) => s.album == albumName).toList();
+        final idx = alSongs.indexWhere((s) => s.id == songId);
+        if (idx >= 0) {
+          await playSongList(alSongs, idx);
+          return;
+        }
+      }
+    }
+
+    if (mediaId.startsWith('artist_song_')) {
+      final parts = mediaId.substring('artist_song_'.length).split(':::');
+      if (parts.length >= 2) {
+        final artistName = parts[0];
+        final songId = parts[1];
+        final aSongs = cachedSongs.where((s) => s.artist == artistName).toList();
+        final idx = aSongs.indexWhere((s) => s.id == songId);
+        if (idx >= 0) {
+          await playSongList(aSongs, idx);
+          return;
+        }
+      }
+    }
+
+    if (mediaId.startsWith('playlist_song_')) {
+      final parts = mediaId.substring('playlist_song_'.length).split(':::');
+      if (parts.length >= 2) {
+        final pId = parts[0];
+        final songId = parts[1];
+        final playlists = _cacheService.getPlaylists();
+        final p = playlists.where((pl) => pl.id == pId).firstOrNull;
+        if (p != null) {
+          final songMap = {for (var s in cachedSongs) s.id: s};
+          final pSongs = <SongModel>[];
+          for (final id in p.songIds) {
+            final s = songMap[id];
+            if (s != null) pSongs.add(s);
+          }
+          final idx = pSongs.indexWhere((s) => s.id == songId);
+          if (idx >= 0) {
+            await playSongList(pSongs, idx);
+            return;
+          }
+        }
+      }
+    }
+
+    // C. Current Active Queue Item Jump
+    final inQueueIdx = _effectivePlaylist.indexWhere((s) => s.id == mediaId);
+    if (inQueueIdx >= 0) {
+      await skipToQueueItem(inQueueIdx);
+      return;
+    }
+
+    // D. Direct Song ID fallback
     final targetIdx = cachedSongs.indexWhere((s) => s.id == mediaId);
     if (targetIdx >= 0) {
       await playSongList(cachedSongs, targetIdx);

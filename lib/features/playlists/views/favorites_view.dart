@@ -5,6 +5,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../core/widgets/track_tile.dart';
 import '../../../core/widgets/soniq_button.dart';
 import '../../../core/widgets/soniq_empty_state.dart';
+import '../../../core/widgets/soniq_floating_playback_bar.dart';
 import '../../navigation/controllers/navigation_controller.dart';
 import '../../player/controllers/player_controller.dart';
 import '../../library/controllers/library_controller.dart';
@@ -83,15 +84,17 @@ class _FavoritesViewState extends State<FavoritesView> {
             );
           }
 
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // 1. Search Bar (when expanded)
-              if (_isSearchExpanded)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    child: TextField(
+          return Stack(
+            children: [
+              CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // 1. Search Bar (when expanded)
+                  if (_isSearchExpanded)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: TextField(
                       controller: _searchController,
                       autofocus: true,
                       onChanged: (val) => favController.updateSearch(val),
@@ -242,8 +245,19 @@ class _FavoritesViewState extends State<FavoritesView> {
                     ),
                   ),
                 ),
-            ],
-          );
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: playerController.currentSong.value != null ? 165 : 100,
+                  ),
+                ),
+              ],
+            ),
+            SoniqFloatingPlaybackBar(
+              songs: favSongs,
+              collectionTitle: 'Favorites',
+            ),
+          ],
+        );
         }),
       ),
     );

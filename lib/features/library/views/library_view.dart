@@ -7,6 +7,7 @@ import '../../../core/widgets/track_tile.dart';
 import '../../../core/widgets/soniq_pill_tab.dart';
 import '../../../core/widgets/soniq_empty_state.dart';
 import '../../../core/widgets/alphabet_fast_scroller.dart';
+import '../../../core/widgets/soniq_floating_playback_bar.dart';
 import '../../player/controllers/player_controller.dart';
 import '../controllers/library_controller.dart';
 import 'widgets/track_options_bottom_sheet.dart';
@@ -166,67 +167,80 @@ class _LibraryViewState extends State<LibraryView> {
 
             // 3. Tab Content
             Expanded(
-              child: Obx(() {
-                final tab = libraryController.activeTab.value;
-                final songs = libraryController.filteredSongs;
+              child: Stack(
+                children: [
+                  Obx(() {
+                    final tab = libraryController.activeTab.value;
+                    final songs = libraryController.filteredSongs;
 
-                if (songs.isEmpty && !libraryController.isScanning.value) {
-                  return SoniqEmptyState(
-                    title: 'No Music Found',
-                    description: 'No audio files found on your device storage. Tap below to scan your music library.',
-                    buttonText: 'Scan Storage',
-                    onButtonPressed: () => libraryController.scanLibrary(),
-                  );
-                }
+                    if (songs.isEmpty && !libraryController.isScanning.value) {
+                      return SoniqEmptyState(
+                        title: 'No Music Found',
+                        description: 'No audio files found on your device storage. Tap below to scan your music library.',
+                        buttonText: 'Scan Storage',
+                        onButtonPressed: () => libraryController.scanLibrary(),
+                      );
+                    }
 
-                switch (tab) {
-                  case LibraryFilterTab.songs:
-                    return AlphabetFastScroller(
-                      scrollController: _scrollController,
-                      songs: songs,
-                      itemExtent: 68.0,
-                      isArtistSort: libraryController.sortOption.value == SongSortOption.artistAsc ||
-                          libraryController.sortOption.value == SongSortOption.artistDesc,
-                      child: RefreshIndicator(
-                        color: AppColors.primary,
-                        backgroundColor: AppColors.surfaceElevated,
-                        onRefresh: () => libraryController.scanLibrary(),
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: songs.length,
+                    switch (tab) {
+                      case LibraryFilterTab.songs:
+                        return AlphabetFastScroller(
+                          scrollController: _scrollController,
+                          songs: songs,
                           itemExtent: 68.0,
-                          padding: const EdgeInsets.only(bottom: 80),
-                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                          itemBuilder: (context, index) {
-                            final song = songs[index];
-                            final isCurrent = playerController.currentSong.value?.id == song.id;
+                          isArtistSort: libraryController.sortOption.value == SongSortOption.artistAsc ||
+                              libraryController.sortOption.value == SongSortOption.artistDesc,
+                          child: RefreshIndicator(
+                            color: AppColors.primary,
+                            backgroundColor: AppColors.surfaceElevated,
+                            onRefresh: () => libraryController.scanLibrary(),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              itemCount: songs.length,
+                              itemExtent: 68.0,
+                              padding: EdgeInsets.only(
+                                bottom: playerController.currentSong.value != null ? 165.0 : 100.0,
+                              ),
+                              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                              itemBuilder: (context, index) {
+                                final song = songs[index];
+                                final isCurrent = playerController.currentSong.value?.id == song.id;
 
-                            return TrackTile(
-                              song: song,
-                              isPlaying: isCurrent,
-                              onTap: () {
-                                playerController.playSong(song, songs);
+                                return TrackTile(
+                                  song: song,
+                                  isPlaying: isCurrent,
+                                  onTap: () {
+                                    playerController.playSong(song, songs);
+                                  },
+                                  onFavoriteTap: () {
+                                    libraryController.toggleFavorite(song);
+                                  },
+                                  onMoreTap: () => _openTrackOptions(context, song),
+                                );
                               },
-                              onFavoriteTap: () {
-                                libraryController.toggleFavorite(song);
-                              },
-                              onMoreTap: () => _openTrackOptions(context, song),
-                            );
-                          },
-                        ),
-                      ),
-                    );
+                            ),
+                          ),
+                        );
 
-                  case LibraryFilterTab.artists:
-                    return _buildArtistsView(libraryController, playerController);
+                      case LibraryFilterTab.artists:
+                        return _buildArtistsView(libraryController, playerController);
 
-                  case LibraryFilterTab.albums:
-                    return _buildAlbumsView(libraryController, playerController);
+                      case LibraryFilterTab.albums:
+                        return _buildAlbumsView(libraryController, playerController);
 
-                  case LibraryFilterTab.folders:
-                    return FolderBrowseView(foldersMap: libraryController.foldersMap);
-                }
-              }),
+                      case LibraryFilterTab.folders:
+                        return FolderBrowseView(foldersMap: libraryController.foldersMap);
+                    }
+                  }),
+
+                  // Floating Play All & Shuffle All action bar (visible on Songs tab)
+                  Obx(() => SoniqFloatingPlaybackBar(
+                        songs: libraryController.filteredSongs,
+                        collectionTitle: 'All Songs',
+                        isVisible: libraryController.activeTab.value == LibraryFilterTab.songs,
+                      )),
+                ],
+              ),
             ),
           ],
         ),
