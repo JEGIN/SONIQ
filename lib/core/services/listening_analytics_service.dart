@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../database/song_cache_service.dart';
 import '../models/analytics_summary_model.dart';
 import '../models/discovery_insights_model.dart';
@@ -9,7 +11,8 @@ import '../models/song_model.dart';
 import '../models/soniq_replay_model.dart';
 
 class ListeningAnalyticsService {
-  static final ListeningAnalyticsService _instance = ListeningAnalyticsService._internal();
+  static final ListeningAnalyticsService _instance =
+      ListeningAnalyticsService._internal();
   factory ListeningAnalyticsService() => _instance;
   ListeningAnalyticsService._internal();
 
@@ -28,7 +31,9 @@ class ListeningAnalyticsService {
     if (range != null) {
       final startMs = range.start.millisecondsSinceEpoch;
       final endMs = range.end.millisecondsSinceEpoch;
-      filtered = allEvents.where((e) => e.startTimeMs >= startMs && e.startTimeMs <= endMs).toList();
+      filtered = allEvents
+          .where((e) => e.startTimeMs >= startMs && e.startTimeMs <= endMs)
+          .toList();
     } else {
       filtered = allEvents;
     }
@@ -59,7 +64,12 @@ class ListeningAnalyticsService {
         dailyMetrics: const [],
         hourlyMetrics: _emptyHourlyMetrics(),
         weekdayVsWeekend: const {'weekday': 0, 'weekend': 0},
-        dayParts: const {'morning': 0, 'afternoon': 0, 'evening': 0, 'night': 0},
+        dayParts: const {
+          'morning': 0,
+          'afternoon': 0,
+          'evening': 0,
+          'night': 0,
+        },
       );
     }
 
@@ -83,7 +93,9 @@ class ListeningAnalyticsService {
     }
 
     final totalEvents = filtered.length;
-    final completionRate = totalEvents > 0 ? (completedPlays / totalEvents) : 0.0;
+    final completionRate = totalEvents > 0
+        ? (completedPlays / totalEvents)
+        : 0.0;
     final skipRate = totalEvents > 0 ? (skippedPlays / totalEvents) : 0.0;
 
     // 3. Average Daily Listening Calculation
@@ -92,16 +104,22 @@ class ListeningAnalyticsService {
       final d = DateTime.fromMillisecondsSinceEpoch(e.startTimeMs);
       uniqueDaysInPeriod.add(DateFormat('yyyy-MM-dd').format(d));
     }
-    final activeDayCount = uniqueDaysInPeriod.isEmpty ? 1 : uniqueDaysInPeriod.length;
+    final activeDayCount = uniqueDaysInPeriod.isEmpty
+        ? 1
+        : uniqueDaysInPeriod.length;
     final averageDailyListeningMs = totalListeningTimeMs ~/ activeDayCount;
 
     // 4. Session Duration Calculation
     final sessionMap = <String, int>{};
     for (final e in filtered) {
-      sessionMap[e.sessionId] = (sessionMap[e.sessionId] ?? 0) + e.listenedDurationMs;
+      sessionMap[e.sessionId] =
+          (sessionMap[e.sessionId] ?? 0) + e.listenedDurationMs;
     }
     final totalSessions = sessionMap.isEmpty ? 1 : sessionMap.length;
-    final totalSessionDuration = sessionMap.values.fold<int>(0, (a, b) => a + b);
+    final totalSessionDuration = sessionMap.values.fold<int>(
+      0,
+      (a, b) => a + b,
+    );
     final averageSessionDurationMs = totalSessionDuration ~/ totalSessions;
 
     // 5. Streaks (Computed across qualified plays in all history)
@@ -113,34 +131,41 @@ class ListeningAnalyticsService {
       songGroups.putIfAbsent(e.songId, () => []).add(e);
     }
 
-    final topSongs = songGroups.entries.map((entry) {
-      final list = entry.value;
-      final first = list.first;
-      final playCount = list.where((e) => e.isQualifiedPlay).length;
-      final songDurationMs = list.fold<int>(0, (sum, e) => sum + e.listenedDurationMs);
-      final completed = list.where((e) => e.completionPercentage >= 0.90).length;
-      final skipped = list.where((e) => e.isSkipped).length;
-      final percentage = totalListeningTimeMs > 0 ? (songDurationMs / totalListeningTimeMs) : 0.0;
+    final topSongs =
+        songGroups.entries.map((entry) {
+          final list = entry.value;
+          final first = list.first;
+          final playCount = list.where((e) => e.isQualifiedPlay).length;
+          final songDurationMs = list.fold<int>(
+            0,
+            (sum, e) => sum + e.listenedDurationMs,
+          );
+          final completed = list
+              .where((e) => e.completionPercentage >= 0.90)
+              .length;
+          final skipped = list.where((e) => e.isSkipped).length;
+          final percentage = totalListeningTimeMs > 0
+              ? (songDurationMs / totalListeningTimeMs)
+              : 0.0;
 
-      return TopItemMetric(
-        id: first.songId,
-        title: first.songTitle,
-        subtitle: first.artistName,
-        playCount: playCount,
-        totalListeningMs: songDurationMs,
-        completionRate: list.isNotEmpty ? completed / list.length : 0.0,
-        skipRate: list.isNotEmpty ? skipped / list.length : 0.0,
-        extraInfo: first.albumName,
-        percentage: percentage,
-      );
-    }).toList()
-      ..sort((a, b) {
-        final c = b.playCount.compareTo(a.playCount);
-        if (c != 0) return c;
-        final d = b.totalListeningMs.compareTo(a.totalListeningMs);
-        if (d != 0) return d;
-        return a.title.compareTo(b.title);
-      });
+          return TopItemMetric(
+            id: first.songId,
+            title: first.songTitle,
+            subtitle: first.artistName,
+            playCount: playCount,
+            totalListeningMs: songDurationMs,
+            completionRate: list.isNotEmpty ? completed / list.length : 0.0,
+            skipRate: list.isNotEmpty ? skipped / list.length : 0.0,
+            extraInfo: first.albumName,
+            percentage: percentage,
+          );
+        }).toList()..sort((a, b) {
+          final c = b.playCount.compareTo(a.playCount);
+          if (c != 0) return c;
+          final d = b.totalListeningMs.compareTo(a.totalListeningMs);
+          if (d != 0) return d;
+          return a.title.compareTo(b.title);
+        });
 
     // 7. Top Artists
     final artistGroups = <String, List<PlaybackEventModel>>{};
@@ -148,28 +173,33 @@ class ListeningAnalyticsService {
       artistGroups.putIfAbsent(e.artistName, () => []).add(e);
     }
 
-    final topArtists = artistGroups.entries.map((entry) {
-      final list = entry.value;
-      final artistName = entry.key;
-      final playCount = list.where((e) => e.isQualifiedPlay).length;
-      final durationMs = list.fold<int>(0, (sum, e) => sum + e.listenedDurationMs);
-      final uniqueSongs = list.map((e) => e.songId).toSet().length;
-      final percentage = totalListeningTimeMs > 0 ? (durationMs / totalListeningTimeMs) : 0.0;
+    final topArtists =
+        artistGroups.entries.map((entry) {
+          final list = entry.value;
+          final artistName = entry.key;
+          final playCount = list.where((e) => e.isQualifiedPlay).length;
+          final durationMs = list.fold<int>(
+            0,
+            (sum, e) => sum + e.listenedDurationMs,
+          );
+          final uniqueSongs = list.map((e) => e.songId).toSet().length;
+          final percentage = totalListeningTimeMs > 0
+              ? (durationMs / totalListeningTimeMs)
+              : 0.0;
 
-      return TopItemMetric(
-        id: artistName,
-        title: artistName,
-        subtitle: '$uniqueSongs songs played',
-        playCount: playCount,
-        totalListeningMs: durationMs,
-        percentage: percentage,
-      );
-    }).toList()
-      ..sort((a, b) {
-        final c = b.playCount.compareTo(a.playCount);
-        if (c != 0) return c;
-        return b.totalListeningMs.compareTo(a.totalListeningMs);
-      });
+          return TopItemMetric(
+            id: artistName,
+            title: artistName,
+            subtitle: '$uniqueSongs songs played',
+            playCount: playCount,
+            totalListeningMs: durationMs,
+            percentage: percentage,
+          );
+        }).toList()..sort((a, b) {
+          final c = b.playCount.compareTo(a.playCount);
+          if (c != 0) return c;
+          return b.totalListeningMs.compareTo(a.totalListeningMs);
+        });
 
     // 8. Top Albums
     final albumGroups = <String, List<PlaybackEventModel>>{};
@@ -177,30 +207,37 @@ class ListeningAnalyticsService {
       albumGroups.putIfAbsent(e.albumName, () => []).add(e);
     }
 
-    final topAlbums = albumGroups.entries.map((entry) {
-      final list = entry.value;
-      final albumName = entry.key;
-      final artistName = list.first.artistName;
-      final playCount = list.where((e) => e.isQualifiedPlay).length;
-      final durationMs = list.fold<int>(0, (sum, e) => sum + e.listenedDurationMs);
-      final completed = list.where((e) => e.completionPercentage >= 0.90).length;
-      final percentage = totalListeningTimeMs > 0 ? (durationMs / totalListeningTimeMs) : 0.0;
+    final topAlbums =
+        albumGroups.entries.map((entry) {
+          final list = entry.value;
+          final albumName = entry.key;
+          final artistName = list.first.artistName;
+          final playCount = list.where((e) => e.isQualifiedPlay).length;
+          final durationMs = list.fold<int>(
+            0,
+            (sum, e) => sum + e.listenedDurationMs,
+          );
+          final completed = list
+              .where((e) => e.completionPercentage >= 0.90)
+              .length;
+          final percentage = totalListeningTimeMs > 0
+              ? (durationMs / totalListeningTimeMs)
+              : 0.0;
 
-      return TopItemMetric(
-        id: albumName,
-        title: albumName,
-        subtitle: artistName,
-        playCount: playCount,
-        totalListeningMs: durationMs,
-        completionRate: list.isNotEmpty ? completed / list.length : 0.0,
-        percentage: percentage,
-      );
-    }).toList()
-      ..sort((a, b) {
-        final c = b.playCount.compareTo(a.playCount);
-        if (c != 0) return c;
-        return b.totalListeningMs.compareTo(a.totalListeningMs);
-      });
+          return TopItemMetric(
+            id: albumName,
+            title: albumName,
+            subtitle: artistName,
+            playCount: playCount,
+            totalListeningMs: durationMs,
+            completionRate: list.isNotEmpty ? completed / list.length : 0.0,
+            percentage: percentage,
+          );
+        }).toList()..sort((a, b) {
+          final c = b.playCount.compareTo(a.playCount);
+          if (c != 0) return c;
+          return b.totalListeningMs.compareTo(a.totalListeningMs);
+        });
 
     // 9. Top Genres
     final genreGroups = <String, List<PlaybackEventModel>>{};
@@ -208,23 +245,29 @@ class ListeningAnalyticsService {
       genreGroups.putIfAbsent(e.genre, () => []).add(e);
     }
 
-    final topGenres = genreGroups.entries.map((entry) {
-      final list = entry.value;
-      final genre = entry.key;
-      final playCount = list.where((e) => e.isQualifiedPlay).length;
-      final durationMs = list.fold<int>(0, (sum, e) => sum + e.listenedDurationMs);
-      final percentage = totalListeningTimeMs > 0 ? (durationMs / totalListeningTimeMs) : 0.0;
+    final topGenres =
+        genreGroups.entries.map((entry) {
+            final list = entry.value;
+            final genre = entry.key;
+            final playCount = list.where((e) => e.isQualifiedPlay).length;
+            final durationMs = list.fold<int>(
+              0,
+              (sum, e) => sum + e.listenedDurationMs,
+            );
+            final percentage = totalListeningTimeMs > 0
+                ? (durationMs / totalListeningTimeMs)
+                : 0.0;
 
-      return TopItemMetric(
-        id: genre,
-        title: genre,
-        subtitle: '$playCount plays',
-        playCount: playCount,
-        totalListeningMs: durationMs,
-        percentage: percentage,
-      );
-    }).toList()
-      ..sort((a, b) => b.totalListeningMs.compareTo(a.totalListeningMs));
+            return TopItemMetric(
+              id: genre,
+              title: genre,
+              subtitle: '$playCount plays',
+              playCount: playCount,
+              totalListeningMs: durationMs,
+              percentage: percentage,
+            );
+          }).toList()
+          ..sort((a, b) => b.totalListeningMs.compareTo(a.totalListeningMs));
 
     // 10. Hourly Distribution & Peak Hour
     final hourMinutes = List<int>.filled(24, 0);
@@ -244,23 +287,45 @@ class ListeningAnalyticsService {
       }
     }
 
-    final hourlyMetrics = List.generate(24, (h) => HourlyListeningMetric(
-      hour: h,
-      listeningMinutes: hourMinutes[h],
-      playCount: hourPlays[h],
-    ));
+    final hourlyMetrics = List.generate(
+      24,
+      (h) => HourlyListeningMetric(
+        hour: h,
+        listeningMinutes: hourMinutes[h],
+        playCount: hourPlays[h],
+      ),
+    );
 
     // 11. Daily Distribution (up to 30 intervals)
     final dailyMap = <String, List<PlaybackEventModel>>{};
     for (final e in filtered) {
-      final dStr = DateFormat('yyyy-MM-dd').format(DateTime.fromMillisecondsSinceEpoch(e.startTimeMs));
+      final dStr = DateFormat('yyyy-MM-dd')
+          .format(DateTime.fromMillisecondsSinceEpoch(e.startTimeMs));
       dailyMap.putIfAbsent(dStr, () => []).add(e);
     }
 
     final sortedDates = dailyMap.keys.toList()..sort();
-    final dailyMetrics = sortedDates.map((dStr) {
-      final list = dailyMap[dStr]!;
-      final minutes = list.fold<int>(0, (acc, e) => acc + (e.listenedDurationMs ~/ 60000));
+    List<String> metricDates = sortedDates;
+    if (filter == AnalyticsTimeFilter.last7Days) {
+      final today = DateTime.now();
+      final firstDay = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(const Duration(days: 6));
+      metricDates = List.generate(
+        7,
+        (index) =>
+            DateFormat('yyyy-MM-dd')
+                .format(firstDay.add(Duration(days: index))),
+      );
+    }
+    final dailyMetrics = metricDates.map((dStr) {
+      final list = dailyMap[dStr] ?? const <PlaybackEventModel>[];
+      final minutes = list.fold<int>(
+        0,
+        (acc, e) => acc + (e.listenedDurationMs ~/ 60000),
+      );
       final qPlays = list.where((e) => e.isQualifiedPlay).length;
       return DailyListeningMetric(
         date: DateTime.parse(dStr),
@@ -327,10 +392,7 @@ class ListeningAnalyticsService {
       topGenres: topGenres,
       dailyMetrics: dailyMetrics,
       hourlyMetrics: hourlyMetrics,
-      weekdayVsWeekend: {
-        'weekday': weekdayMs,
-        'weekend': weekendMs,
-      },
+      weekdayVsWeekend: {'weekday': weekdayMs, 'weekend': weekendMs},
       dayParts: {
         'morning': morningMs,
         'afternoon': afternoonMs,
@@ -387,18 +449,20 @@ class ListeningAnalyticsService {
       }
     }
 
-    return {
-      'current': currentStreak,
-      'longest': longestStreak,
-    };
+    return {'current': currentStreak, 'longest': longestStreak};
   }
 
   List<HourlyListeningMetric> _emptyHourlyMetrics() {
-    return List.generate(24, (h) => HourlyListeningMetric(hour: h, listeningMinutes: 0, playCount: 0));
+    return List.generate(
+      24,
+      (h) => HourlyListeningMetric(hour: h, listeningMinutes: 0, playCount: 0),
+    );
   }
 
   /// Generates personalized music discovery recommendations based on listening history
-  Future<DiscoveryInsightsModel> generateDiscoveryInsights(List<SongModel> library) async {
+  Future<DiscoveryInsightsModel> generateDiscoveryInsights(
+    List<SongModel> library,
+  ) async {
     final allEvents = _cacheService.getAllPlaybackEvents();
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
@@ -417,16 +481,20 @@ class ListeningAnalyticsService {
     }
 
     // 1. Forgotten Favorites: Marked as Favorite, but not played in > 30 days
-    final forgottenFavorites = library.where((s) {
-      if (!s.isFavorite) return false;
-      final lastPlayed = songLastPlayedMap[s.id] ?? s.lastPlayedTimestamp;
-      return (nowMs - lastPlayed) > thirtyDaysMs;
-    }).take(10).toList();
+    final forgottenFavorites = library
+        .where((s) {
+          if (!s.isFavorite) return false;
+          final lastPlayed = songLastPlayedMap[s.id] ?? s.lastPlayedTimestamp;
+          return (nowMs - lastPlayed) > thirtyDaysMs;
+        })
+        .take(10)
+        .toList();
 
     // 2. Rediscovered Music: Played in the last 7 days after a silence of > 45 days
     final rediscovered = <SongModel>[];
     for (final entry in songEventsMap.entries) {
-      final events = entry.value..sort((a, b) => a.startTimeMs.compareTo(b.startTimeMs));
+      final events = entry.value
+        ..sort((a, b) => a.startTimeMs.compareTo(b.startTimeMs));
       if (events.length >= 2) {
         final last = events.last;
         if (nowMs - last.startTimeMs <= sevenDaysMs) {
@@ -444,11 +512,15 @@ class ListeningAnalyticsService {
     // 3. Underplayed Albums: Albums in the library with <= 1 plays
     final albumPlays = <String, int>{};
     for (final e in allEvents) {
-      albumPlays[e.albumName] = (albumPlays[e.albumName] ?? 0) + (e.isQualifiedPlay ? 1 : 0);
+      albumPlays[e.albumName] =
+          (albumPlays[e.albumName] ?? 0) + (e.isQualifiedPlay ? 1 : 0);
     }
     final allLibraryAlbums = library.map((s) => s.album).toSet();
     final underplayedAlbums = allLibraryAlbums
-        .where((alb) => (albumPlays[alb] ?? 0) <= 1 && alb.isNotEmpty && alb != 'Unknown')
+        .where(
+          (alb) =>
+              (albumPlays[alb] ?? 0) <= 1 && alb.isNotEmpty && alb != 'Unknown',
+        )
         .take(8)
         .toList();
 
@@ -465,7 +537,8 @@ class ListeningAnalyticsService {
     for (final map in sessionSongCounts.values) {
       for (final entry in map.entries) {
         if (entry.value >= 2) {
-          replayedSongScores[entry.key] = (replayedSongScores[entry.key] ?? 0) + entry.value;
+          replayedSongScores[entry.key] =
+              (replayedSongScores[entry.key] ?? 0) + entry.value;
         }
       }
     }
@@ -499,7 +572,8 @@ class ListeningAnalyticsService {
     final recentArtistPlays = <String, int>{};
     for (final e in allEvents) {
       if (nowMs - e.startTimeMs <= fourteenDaysMs && e.isQualifiedPlay) {
-        recentArtistPlays[e.artistName] = (recentArtistPlays[e.artistName] ?? 0) + 1;
+        recentArtistPlays[e.artistName] =
+            (recentArtistPlays[e.artistName] ?? 0) + 1;
       }
     }
     final heavyRotation = recentArtistPlays.entries.toList()
@@ -516,13 +590,18 @@ class ListeningAnalyticsService {
   }
 
   /// Generates the annual SONIQ Replay summary (e.g. for Spotify Wrapped / Apple Music Replay)
-  Future<SoniqReplayModel> generateSoniqReplay(int year, List<SongModel> library) async {
+  Future<SoniqReplayModel> generateSoniqReplay(
+    int year,
+    List<SongModel> library,
+  ) async {
     final startOfYear = DateTime(year, 1, 1).millisecondsSinceEpoch;
     final endOfYear = DateTime(year, 12, 31, 23, 59, 59).millisecondsSinceEpoch;
 
     final yearEvents = _cacheService
         .getAllPlaybackEvents()
-        .where((e) => e.startTimeMs >= startOfYear && e.startTimeMs <= endOfYear)
+        .where(
+          (e) => e.startTimeMs >= startOfYear && e.startTimeMs <= endOfYear,
+        )
         .toList();
 
     int totalListeningTimeMs = 0;
@@ -546,7 +625,8 @@ class ListeningAnalyticsService {
     // Peak Month
     final monthMinutes = List<int>.filled(12, 0);
     for (final e in yearEvents) {
-      final month = DateTime.fromMillisecondsSinceEpoch(e.startTimeMs).month - 1;
+      final month =
+          DateTime.fromMillisecondsSinceEpoch(e.startTimeMs).month - 1;
       monthMinutes[month] += e.listenedDurationMs ~/ 60000;
     }
     int maxMonthIdx = 0;
@@ -558,18 +638,38 @@ class ListeningAnalyticsService {
       }
     }
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     final peakMonth = monthNames[maxMonthIdx];
 
     // Most Active Day
     final dayMinutes = List<int>.filled(7, 0);
     for (final e in yearEvents) {
-      final weekday = DateTime.fromMillisecondsSinceEpoch(e.startTimeMs).weekday - 1; // 0 = Mon
+      final weekday =
+          DateTime.fromMillisecondsSinceEpoch(e.startTimeMs).weekday -
+          1; // 0 = Mon
       dayMinutes[weekday] += e.listenedDurationMs ~/ 60000;
     }
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayNames = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
     int maxDayIdx = 0;
     int maxDayMin = -1;
     for (int d = 0; d < 7; d++) {
@@ -583,16 +683,22 @@ class ListeningAnalyticsService {
     // Milestones
     final milestones = <String>[];
     if (totalHours >= 1.0) {
-      milestones.add('${totalHours.toStringAsFixed(1)} hours of pure offline music');
+      milestones.add(
+        '${totalHours.toStringAsFixed(1)} hours of pure offline music',
+      );
     }
     if (qualifiedPlays >= 10) {
       milestones.add('$qualifiedPlays qualified tracks enjoyed');
     }
     if (summary.uniqueArtistsPlayed >= 5) {
-      milestones.add('${summary.uniqueArtistsPlayed} distinct artists explored');
+      milestones.add(
+        '${summary.uniqueArtistsPlayed} distinct artists explored',
+      );
     }
     if (summary.longestStreakDays >= 3) {
-      milestones.add('${summary.longestStreakDays}-day consecutive listening streak');
+      milestones.add(
+        '${summary.longestStreakDays}-day consecutive listening streak',
+      );
     }
     if (milestones.isEmpty) {
       milestones.add('Beginning your personal offline listening journey');
@@ -605,11 +711,15 @@ class ListeningAnalyticsService {
       topSongs: summary.topSongs.take(5).toList(),
       topArtists: summary.topArtists.take(5).toList(),
       topAlbums: summary.topAlbums.take(5).toList(),
-      favoriteGenre: summary.topGenres.isNotEmpty ? summary.topGenres.first.title : 'Eclectic Mix',
+      favoriteGenre: summary.topGenres.isNotEmpty
+          ? summary.topGenres.first.title
+          : 'Eclectic Mix',
       peakMonth: peakMonth,
       mostActiveDay: mostActiveDay,
       longestStreakDays: summary.longestStreakDays,
-      topReplayedSong: summary.topSongs.isNotEmpty ? summary.topSongs.first : null,
+      topReplayedSong: summary.topSongs.isNotEmpty
+          ? summary.topSongs.first
+          : null,
       milestones: milestones,
     );
   }
@@ -644,15 +754,21 @@ class ListeningAnalyticsService {
       totalListeningMs += e.listenedDurationMs;
       if (e.completionPercentage >= 0.90) completed++;
       if (e.isSkipped) skipped++;
-      if (firstPlayed == 0 || e.startTimeMs < firstPlayed) firstPlayed = e.startTimeMs;
-      if (e.startTimeMs > lastPlayed) lastPlayed = e.startTimeMs;
+      if (firstPlayed == 0 || e.startTimeMs < firstPlayed) {
+        firstPlayed = e.startTimeMs;
+      }
+      if (e.startTimeMs > lastPlayed) {
+        lastPlayed = e.startTimeMs;
+      }
     }
 
     return {
       'songId': songId,
       'totalPlays': totalPlays,
       'totalListeningMs': totalListeningMs,
-      'completionRate': songEvents.isNotEmpty ? completed / songEvents.length : 0.0,
+      'completionRate': songEvents.isNotEmpty
+          ? completed / songEvents.length
+          : 0.0,
       'skipCount': skipped,
       'firstPlayedMs': firstPlayed,
       'lastPlayedMs': lastPlayed,

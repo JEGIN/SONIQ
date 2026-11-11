@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -8,8 +9,12 @@ class AudioDspService {
   AudioDspService._internal();
 
   static const MethodChannel _channel = MethodChannel('com.soniq.soniq/dsp');
-  static const EventChannel _vizChannel = EventChannel('com.soniq.soniq/visualizer');
-  static const EventChannel _deviceChannel = EventChannel('com.soniq.soniq/device_route');
+  static const EventChannel _vizChannel = EventChannel(
+    'com.soniq.soniq/visualizer',
+  );
+  static const EventChannel _deviceChannel = EventChannel(
+    'com.soniq.soniq/device_route',
+  );
 
   Stream<List<double>>? _visualizerStream;
   Stream<String>? _deviceStream;
@@ -19,10 +24,14 @@ class AudioDspService {
   Stream<List<double>> get visualizerStream {
     _visualizerStream ??= _vizChannel
         .receiveBroadcastStream()
-        .map((event) => (event as List<dynamic>).map((e) => (e as num).toDouble()).toList())
+        .map(
+          (event) => (event as List<dynamic>)
+              .map((e) => (e as num).toDouble())
+              .toList(),
+        )
         .handleError((e) {
-      debugPrint('SONIQ_DSP: Visualizer stream error: $e');
-    });
+          debugPrint('SONIQ_DSP: Visualizer stream error: $e');
+        });
     return _visualizerStream!;
   }
 
@@ -31,8 +40,8 @@ class AudioDspService {
         .receiveBroadcastStream()
         .map((event) => event.toString())
         .handleError((e) {
-      debugPrint('SONIQ_DSP: Device stream error: $e');
-    });
+          debugPrint('SONIQ_DSP: Device stream error: $e');
+        });
     return _deviceStream!;
   }
 
@@ -40,7 +49,10 @@ class AudioDspService {
     if (sessionId <= 0 || sessionId == _lastSessionId) return null;
     _lastSessionId = sessionId;
     try {
-      final res = await _channel.invokeMapMethod<String, dynamic>('attachSession', {'sessionId': sessionId});
+      final res = await _channel.invokeMapMethod<String, dynamic>(
+        'attachSession',
+        {'sessionId': sessionId},
+      );
       return res;
     } catch (e) {
       debugPrint('SONIQ_DSP: attachSession error: $e');
@@ -66,7 +78,10 @@ class AudioDspService {
 
   Future<void> setBandGain(int band, double gainDb) async {
     try {
-      await _channel.invokeMethod('setBandGain', {'band': band, 'gain': gainDb});
+      await _channel.invokeMethod('setBandGain', {
+        'band': band,
+        'gain': gainDb,
+      });
     } catch (e) {
       debugPrint('SONIQ_DSP: setBandGain error: $e');
     }
@@ -98,7 +113,9 @@ class AudioDspService {
 
   Future<void> setVirtualizerStrength(int strength) async {
     try {
-      await _channel.invokeMethod('setVirtualizerStrength', {'strength': strength});
+      await _channel.invokeMethod('setVirtualizerStrength', {
+        'strength': strength,
+      });
     } catch (e) {
       debugPrint('SONIQ_DSP: setVirtualizerStrength error: $e');
     }
@@ -122,7 +139,10 @@ class AudioDspService {
 
   Future<Map<String, double>?> setChannelBalance(double balance) async {
     try {
-      final res = await _channel.invokeMapMethod<String, dynamic>('setChannelBalance', {'balance': balance});
+      final res = await _channel.invokeMapMethod<String, dynamic>(
+        'setChannelBalance',
+        {'balance': balance},
+      );
       if (res != null) {
         return {
           'left': (res['left'] as num).toDouble(),
@@ -153,7 +173,9 @@ class AudioDspService {
 
   Future<String> getConnectedOutputDevice() async {
     try {
-      final res = await _channel.invokeMethod<String>('getConnectedOutputDevice');
+      final res = await _channel.invokeMethod<String>(
+        'getConnectedOutputDevice',
+      );
       return res ?? 'speaker';
     } catch (e) {
       return 'speaker';
@@ -169,9 +191,35 @@ class AudioDspService {
     }
   }
 
+  Future<Map<String, dynamic>?> getDeviceCapabilities() async {
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>(
+        'getDeviceCapabilities',
+      );
+    } catch (e) {
+      debugPrint('SONIQ_DSP: getDeviceCapabilities error: $e');
+      return null;
+    }
+  }
+
+  Future<bool> setHighRefreshRate(bool enabled) async {
+    try {
+      final result = await _channel.invokeMethod<bool>('setHighRefreshRate', {
+        'enabled': enabled,
+      });
+      return result ?? false;
+    } catch (e) {
+      debugPrint('SONIQ_DSP: setHighRefreshRate error: $e');
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> getAudioFileSpecs(String filePath) async {
     try {
-      final res = await _channel.invokeMapMethod<String, dynamic>('getAudioFileSpecs', {'path': filePath});
+      final res = await _channel.invokeMapMethod<String, dynamic>(
+        'getAudioFileSpecs',
+        {'path': filePath},
+      );
       return res;
     } catch (e) {
       debugPrint('SONIQ_DSP: getAudioFileSpecs error: $e');

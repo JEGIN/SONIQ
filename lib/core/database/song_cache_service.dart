@@ -1,7 +1,9 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
 import '../models/ringtone_model.dart';
@@ -40,7 +42,9 @@ class SongCacheService {
     _smartPlaylistsBox = await Hive.openBox<String>(HiveBoxes.smartPlaylists);
     _classificationsBox = await Hive.openBox<String>(HiveBoxes.classifications);
     _playbackEventsBox = await Hive.openBox<String>(HiveBoxes.playbackEvents);
-    _analyticsSummariesBox = await Hive.openBox<String>(HiveBoxes.analyticsSummaries);
+    _analyticsSummariesBox = await Hive.openBox<String>(
+      HiveBoxes.analyticsSummaries,
+    );
 
     _initialized = true;
     debugPrint('SONIQ: Hive Database initialized successfully.');
@@ -204,12 +208,19 @@ class SongCacheService {
     return map;
   }
 
-  Future<void> saveClassification(SongClassificationModel classification) async {
+  Future<void> saveClassification(
+    SongClassificationModel classification,
+  ) async {
     if (!_initialized) return;
-    await _classificationsBox.put(classification.songId, classification.toJson());
+    await _classificationsBox.put(
+      classification.songId,
+      classification.toJson(),
+    );
   }
 
-  Future<void> saveAllClassifications(Map<String, SongClassificationModel> items) async {
+  Future<void> saveAllClassifications(
+    Map<String, SongClassificationModel> items,
+  ) async {
     if (!_initialized) return;
     final entries = <String, String>{};
     for (final e in items.entries) {
@@ -303,6 +314,44 @@ class SongCacheService {
 
   Future<void> setPlayCountThresholdSeconds(int seconds) async {
     await setSetting('play_count_threshold_seconds', seconds);
+  }
+
+  // --- AUDIO SCANNER RECORDINGS FILTER ---
+  bool isSkipRecordingsEnabled() {
+    return getSetting('skip_recordings_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setSkipRecordingsEnabled(bool enabled) async {
+    await setSetting('skip_recordings_enabled', enabled);
+  }
+
+  List<String> getExcludedDirectories() {
+    final value = getSetting(
+      'excluded_music_directories',
+      defaultValue: const <String>[],
+    );
+    if (value is! List) return const [];
+    return value
+        .map((item) => item.toString())
+        .where((path) => path.isNotEmpty)
+        .toList();
+  }
+
+  Future<void> setExcludedDirectories(List<String> paths) async {
+    await setSetting('excluded_music_directories', paths.toSet().toList());
+  }
+
+  bool isPathExcluded(String path) {
+    if (path.isEmpty) return false;
+    final normalizedPath = path.replaceAll('\\', '/').toLowerCase();
+    return getExcludedDirectories().any((excluded) {
+      final normalizedDirectory = excluded
+          .replaceAll('\\', '/')
+          .toLowerCase()
+          .replaceFirst(RegExp(r'/+$'), '');
+      return normalizedPath == normalizedDirectory ||
+          normalizedPath.startsWith('$normalizedDirectory/');
+    });
   }
 
   // --- STORAGE STATS & CACHE CLEARING ---

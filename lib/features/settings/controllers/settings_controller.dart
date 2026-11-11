@@ -1,10 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../../core/database/song_cache_service.dart';
+import '../../../core/services/audio_dsp_service.dart';
 import '../../../core/utils/file_utils.dart';
 import '../../library/controllers/library_controller.dart';
 
@@ -15,11 +19,126 @@ class SettingsController extends GetxController {
   final RxString cacheSizeText = 'Calculating...'.obs;
   final RxBool isClearingCache = false.obs;
   final RxBool isSharingApk = false.obs;
+  final RxBool skipRecordings = true.obs;
+  final RxBool autoPlayOnCastChange = false.obs;
+  final RxBool crossfadeEnabled = false.obs;
+  final RxBool batteryOptimizationEnabled = false.obs;
+  final RxBool highRefreshRateEnabled = false.obs;
+  final RxBool hapticFeedbackEnabled = true.obs;
+  final RxBool playerGesturesEnabled = true.obs;
+  final RxList<String> excludedDirectories = <String>[].obs;
+  final AudioDspService dspService = AudioDspService();
 
   @override
   void onInit() {
     super.onInit();
+    skipRecordings.value = cacheService.isSkipRecordingsEnabled();
+    autoPlayOnCastChange.value = cacheService.getSetting(
+      'auto_play_on_cast_change',
+      defaultValue: false,
+    ) as bool;
+    crossfadeEnabled.value = cacheService.getSetting(
+      'crossfade_enabled',
+      defaultValue: false,
+    ) as bool;
+    batteryOptimizationEnabled.value = cacheService.getSetting(
+      'battery_optimization_enabled',
+      defaultValue: false,
+    ) as bool;
+    highRefreshRateEnabled.value = cacheService.getSetting(
+      'high_refresh_rate_enabled',
+      defaultValue: false,
+    ) as bool;
+    hapticFeedbackEnabled.value = cacheService.getSetting(
+      'haptic_feedback_enabled',
+      defaultValue: true,
+    ) as bool;
+    playerGesturesEnabled.value = cacheService.getSetting(
+      'player_gestures_enabled',
+      defaultValue: true,
+    ) as bool;
+    excludedDirectories.assignAll(cacheService.getExcludedDirectories());
+    dspService.setVisualizerEnabled(!batteryOptimizationEnabled.value);
+    dspService.setHighRefreshRate(highRefreshRateEnabled.value);
     updateCacheSize();
+  }
+
+  Future<void> setAutoPlayOnCastChange(bool enabled) async {
+    autoPlayOnCastChange.value = enabled;
+    await cacheService.setSetting('auto_play_on_cast_change', enabled);
+  }
+
+  Future<void> setCrossfadeEnabled(bool enabled) async {
+    crossfadeEnabled.value = enabled;
+    await cacheService.setSetting('crossfade_enabled', enabled);
+  }
+
+  Future<void> setBatteryOptimizationEnabled(bool enabled) async {
+    batteryOptimizationEnabled.value = enabled;
+    await cacheService.setSetting('battery_optimization_enabled', enabled);
+    await dspService.setVisualizerEnabled(!enabled);
+  }
+
+  Future<void> setHighRefreshRateEnabled(bool enabled) async {
+    highRefreshRateEnabled.value = enabled;
+    await cacheService.setSetting('high_refresh_rate_enabled', enabled);
+    await dspService.setHighRefreshRate(enabled);
+  }
+
+  Future<void> setHapticFeedbackEnabled(bool enabled) async {
+    hapticFeedbackEnabled.value = enabled;
+    await cacheService.setSetting('haptic_feedback_enabled', enabled);
+  }
+
+  Future<void> setPlayerGesturesEnabled(bool enabled) async {
+    playerGesturesEnabled.value = enabled;
+    await cacheService.setSetting('player_gestures_enabled', enabled);
+  }
+
+  Future<void> addExcludedDirectory() async {
+    try {
+      final directory = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Choose a folder to exclude',
+      );
+      if (directory == null ||
+          directory.isEmpty ||
+          excludedDirectories.contains(directory)) {
+        return;
+      }
+      final updated = [...excludedDirectories, directory];
+      excludedDirectories.assignAll(updated);
+      await cacheService.setExcludedDirectories(updated);
+      libraryController.loadCachedSongs();
+    } catch (e) {
+      Get.snackbar(
+        'Folder Picker Unavailable',
+        'Unable to choose a folder on this device.',
+      );
+    }
+  }
+
+  Future<void> removeExcludedDirectory(String directory) async {
+    final updated = excludedDirectories
+        .where((path) => path != directory)
+        .toList();
+    excludedDirectories.assignAll(updated);
+    await cacheService.setExcludedDirectories(updated);
+    libraryController.loadCachedSongs();
+  }
+
+  Future<void> toggleSkipRecordings(bool enabled) async {
+    skipRecordings.value = enabled;
+    await cacheService.setSkipRecordingsEnabled(enabled);
+    libraryController.loadCachedSongs();
+    Get.snackbar(
+      'Recording Filter',
+      enabled
+          ? 'Voice & call recordings excluded from music playback.'
+          : 'Recordings will be visible in music library.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFF1B1D26),
+      colorText: Colors.white,
+    );
   }
 
   Future<void> updateCacheSize() async {
@@ -71,7 +190,9 @@ class SettingsController extends GetxController {
       );
 
       const channel = MethodChannel('com.soniq.soniq/app_share');
-      final sourceApkPath = await channel.invokeMethod<String>('getAppSourceApkPath');
+      final sourceApkPath = await channel.invokeMethod<String>(
+        'getAppSourceApkPath',
+      );
 
       if (sourceApkPath == null || sourceApkPath.isEmpty) {
         throw Exception('Could not locate installed application package path.');

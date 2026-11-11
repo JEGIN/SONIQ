@@ -36,13 +36,15 @@ class PermissionService {
         final storageStatus = await Permission.storage.status;
         if (storageStatus.isGranted) return true;
 
-        final Map<Permission, PermissionStatus> statuses = await [
-          Permission.audio,
-          Permission.storage,
-        ].request();
+        // Try Permission.audio first (standard for Android 13+)
+        final audioReq = await Permission.audio.request();
+        if (audioReq.isGranted) return true;
 
-        return (statuses[Permission.audio]?.isGranted ?? false) ||
-            (statuses[Permission.storage]?.isGranted ?? false);
+        // Fallback for Android 12 and below (API <= 32)
+        final storageReq = await Permission.storage.request();
+        if (storageReq.isGranted) return true;
+
+        return false;
       } else if (Platform.isIOS) {
         final mediaLibrary = await Permission.mediaLibrary.request();
         return mediaLibrary.isGranted;

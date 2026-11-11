@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:on_audio_query/on_audio_query.dart' hide SongModel;
+
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/song_model.dart';
+import '../../../core/database/song_cache_service.dart';
 import '../../../core/widgets/soniq_card.dart';
 import '../../../core/widgets/track_tile.dart';
 import '../../../core/widgets/soniq_empty_state.dart';
@@ -101,14 +104,20 @@ class HomeView extends StatelessWidget {
 
                       // Quick Scan / Refresh Button
                       IconButton(
-                        icon: const Icon(Icons.sync_rounded, color: AppColors.textSecondary),
+                        icon: const Icon(
+                          Icons.sync_rounded,
+                          color: AppColors.textSecondary,
+                        ),
                         tooltip: 'Scan Library',
                         onPressed: () => libraryController.scanLibrary(),
                       ),
 
                       // Renault Triber Car Mode Button
                       IconButton(
-                        icon: const Icon(Icons.directions_car_rounded, color: AppColors.gold),
+                        icon: const Icon(
+                          Icons.directions_car_rounded,
+                          color: AppColors.gold,
+                        ),
                         tooltip: 'Renault Triber Car Mode',
                         onPressed: () => Get.to(
                           () => const CarModeView(),
@@ -119,7 +128,10 @@ class HomeView extends StatelessWidget {
 
                       // Listening Analytics Button
                       IconButton(
-                        icon: const Icon(Icons.insights_rounded, color: AppColors.primary),
+                        icon: const Icon(
+                          Icons.insights_rounded,
+                          color: AppColors.primary,
+                        ),
                         tooltip: 'Listening Analytics',
                         onPressed: () => Get.to(
                           () => const AnalyticsDashboardView(),
@@ -129,7 +141,10 @@ class HomeView extends StatelessWidget {
 
                       // Settings Button
                       IconButton(
-                        icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+                        icon: const Icon(
+                          Icons.settings_outlined,
+                          color: AppColors.textSecondary,
+                        ),
                         tooltip: 'Settings',
                         onPressed: () => Get.to(() => const SettingsView()),
                       ),
@@ -148,14 +163,30 @@ class HomeView extends StatelessWidget {
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
-                          onTap: () => homeController.setMixFilter(filter),
+                          onTap: () {
+                            if (SongCacheService().getSetting(
+                                  'haptic_feedback_enabled',
+                                  defaultValue: true,
+                                ) ==
+                                true) {
+                              HapticFeedback.selectionClick();
+                            }
+                            homeController.setMixFilter(filter);
+                          },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF2E131D) : AppColors.surfaceElevated,
+                              color: isSelected
+                                  ? const Color(0xFF2E131D)
+                                  : AppColors.surfaceElevated,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isSelected ? AppColors.primary : AppColors.border,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.border,
                                 width: 1,
                               ),
                             ),
@@ -166,17 +197,23 @@ class HomeView extends StatelessWidget {
                                   filter == 'Song mix'
                                       ? Icons.tune_rounded
                                       : filter == 'Album mix'
-                                          ? Icons.album_rounded
-                                          : Icons.calendar_today_rounded,
+                                      ? Icons.album_rounded
+                                      : Icons.calendar_today_rounded,
                                   size: 14,
-                                  color: isSelected ? AppColors.primary : AppColors.textMuted,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.textMuted,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   filter,
                                   style: TextStyle(
-                                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -193,7 +230,10 @@ class HomeView extends StatelessWidget {
               // 3. Audio Studio Feature Shortcut Banner
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: SoniqCard(
                     onTap: () => navController.changeTab(4),
                     gradient: const LinearGradient(
@@ -209,9 +249,16 @@ class HomeView extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primary, width: 1.2),
+                            border: Border.all(
+                              color: AppColors.primary,
+                              width: 1.2,
+                            ),
                           ),
-                          child: const Icon(Icons.content_cut_rounded, color: AppColors.primary, size: 24),
+                          child: const Icon(
+                            Icons.content_cut_rounded,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
@@ -225,12 +272,19 @@ class HomeView extends StatelessWidget {
                               SizedBox(height: 3),
                               Text(
                                 'Lossless waveform trimming & direct ringtone export',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 16),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
                       ],
                     ),
                   ),
@@ -240,7 +294,10 @@ class HomeView extends StatelessWidget {
               // 4. Listening Analytics & Replay Feature Shortcut Banner
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: SoniqCard(
                     onTap: () => Get.to(
                       () => const AnalyticsDashboardView(),
@@ -259,9 +316,16 @@ class HomeView extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.gold, width: 1.2),
+                            border: Border.all(
+                              color: AppColors.gold,
+                              width: 1.2,
+                            ),
                           ),
-                          child: const Icon(Icons.insights_rounded, color: AppColors.gold, size: 24),
+                          child: const Icon(
+                            Icons.insights_rounded,
+                            color: AppColors.gold,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         const Expanded(
@@ -275,17 +339,125 @@ class HomeView extends StatelessWidget {
                               SizedBox(height: 3),
                               Text(
                                 'Explore personal stats, top tracks, streaks & annual recap',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold, size: 16),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.gold,
+                          size: 16,
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
+
+              if (homeController.todaysMix.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: SoniqCard(
+                      onTap: homeController.playTodaysMix,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1D2940), Color(0xFF171521)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.cyan.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.cyan.withValues(alpha: 0.65),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: AppColors.cyan,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'YOUR MIX',
+                                  style: TextStyle(
+                                    color: AppColors.cyan,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Today's Mix",
+                                  style: AppTypography.headlineSmall,
+                                ),
+                                SizedBox(height: 3),
+                                Text(
+                                  'Picked from your listening habits',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: "Play today's mix",
+                            onPressed: () {
+                              if (SongCacheService().getSetting(
+                                    'haptic_feedback_enabled',
+                                    defaultValue: true,
+                                  ) ==
+                                  true) {
+                                HapticFeedback.selectionClick();
+                              }
+                              homeController.playTodaysMix();
+                            },
+                            icon: const Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: AppColors.cyan,
+                              size: 38,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              if (homeController.todaysMix.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      itemCount: homeController.todaysMix.length,
+                      itemBuilder: (context, index) => _buildCarouselCard(
+                        homeController.todaysMix[index],
+                        homeController.todaysMix,
+                        playerController,
+                      ),
+                    ),
+                  ),
+                ),
 
               // 4. Favourite Tracks Horizontal Carousel (Matches Reference Image 4)
               if (favs.isNotEmpty)
@@ -298,8 +470,14 @@ class HomeView extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Favourite Tracks', style: AppTypography.headlineMedium),
-                            Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                            Text(
+                              'Favourite Tracks',
+                              style: AppTypography.headlineMedium,
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.primary,
+                            ),
                           ],
                         ),
                       ),
@@ -312,7 +490,11 @@ class HomeView extends StatelessWidget {
                           itemCount: favs.length,
                           itemBuilder: (context, index) {
                             final song = favs[index];
-                            return _buildCarouselCard(song, favs, playerController);
+                            return _buildCarouselCard(
+                              song,
+                              favs,
+                              playerController,
+                            );
                           },
                         ),
                       ),
@@ -328,7 +510,10 @@ class HomeView extends StatelessWidget {
                     children: [
                       const Padding(
                         padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-                        child: Text('Recently Played', style: AppTypography.headlineMedium),
+                        child: Text(
+                          'Recently Played',
+                          style: AppTypography.headlineMedium,
+                        ),
                       ),
                       SizedBox(
                         height: 180,
@@ -339,7 +524,11 @@ class HomeView extends StatelessWidget {
                           itemCount: recent.length,
                           itemBuilder: (context, index) {
                             final song = recent[index];
-                            return _buildCarouselCard(song, recent, playerController);
+                            return _buildCarouselCard(
+                              song,
+                              recent,
+                              playerController,
+                            );
                           },
                         ),
                       ),
@@ -354,24 +543,25 @@ class HomeView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Recently Added', style: AppTypography.headlineMedium),
+                      Text(
+                        'Recently Added',
+                        style: AppTypography.headlineMedium,
+                      ),
                     ],
                   ),
                 ),
               ),
 
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final song = added[index];
-                    return TrackTile(
-                      song: song,
-                      isPlaying: playerController.currentSong.value?.id == song.id,
-                      onTap: () => playerController.playSong(song, added),
-                    );
-                  },
-                  childCount: added.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final song = added[index];
+                  return TrackTile(
+                    song: song,
+                    isPlaying:
+                        playerController.currentSong.value?.id == song.id,
+                    onTap: () => playerController.playSong(song, added),
+                  );
+                }, childCount: added.length),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 80)),
@@ -429,9 +619,16 @@ class HomeView extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.65),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
                   ),
-                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ],
             ),
@@ -462,7 +659,11 @@ class HomeView extends StatelessWidget {
         ),
       ),
       child: const Center(
-        child: Icon(Icons.music_note_rounded, size: 36, color: AppColors.primary),
+        child: Icon(
+          Icons.music_note_rounded,
+          size: 36,
+          color: AppColors.primary,
+        ),
       ),
     );
   }

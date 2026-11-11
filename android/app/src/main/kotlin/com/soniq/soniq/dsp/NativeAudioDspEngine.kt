@@ -1,6 +1,7 @@
 package com.soniq.soniq.dsp
 
 import android.app.UiModeManager
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,7 @@ import android.content.res.Configuration
 import android.hardware.usb.UsbManager
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.MediaCodecList
 import android.media.audiofx.*
 import android.os.Build
 import android.os.Handler
@@ -201,6 +203,12 @@ class NativeAudioDspEngine(
             }
             "getConnectedOutputDevice" -> {
                 result.success(getCurrentDeviceType())
+            }
+            "getDeviceCapabilities" -> {
+                result.success(getDeviceCapabilitiesSnapshot())
+            }
+            "setHighRefreshRate" -> {
+                result.success(setHighRefreshRate(call.argument<Boolean>("enabled") ?: false))
             }
             "isCarConnected" -> {
                 result.success(isCarModeActive())
@@ -537,6 +545,11 @@ class NativeAudioDspEngine(
             val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             for (device in devices) {
                 when (device.type) {
+                    AudioDeviceInfo.TYPE_REMOTE_SUBMIX,
+                    AudioDeviceInfo.TYPE_HDMI,
+                    AudioDeviceInfo.TYPE_HDMI_ARC,
+                    AudioDeviceInfo.TYPE_HDMI_EARC,
+                    AudioDeviceInfo.TYPE_DOCK -> return "cast"
                     AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
                     AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> return "bluetooth"
                     AudioDeviceInfo.TYPE_WIRED_HEADSET,
@@ -547,6 +560,88 @@ class NativeAudioDspEngine(
             }
         }
         return "speaker"
+    }
+
+    private fun getDeviceCapabilitiesSnapshot(): Map<String, Any> {
+        val outputDevices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                .map { device ->
+                    val productName = device.productName?.toString()?.takeIf { it.isNotBlank() }
+                    productName ?: outputTypeName(device.type)
+                }
+                .distinct()
+        } else {
+            listOf("Device speaker")
+        }
+
+        val codecs = try {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { codec -> !codec.isEncoder }
+                .flatMap { codec -> codec.supportedTypes.toList() }
+                .distinct()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val decoderNames = try {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { codec -> !codec.isEncoder }
+                .map { codec -> codec.name }
+                .distinct()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        val display = (context as? Activity)?.window?.decorView?.display
+        val maxRefresh = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            display?.supportedModes?.maxByOrNull { mode -> mode.refreshRate }?.refreshRate
+        } else {
+            display?.refreshRate
+        }
+
+        return mapOf(
+            "manufacturer" to Build.MANUFACTURER,
+            "model" to Build.MODEL,
+            "platform" to "Android ${Build.VERSION.RELEASE}",
+            "apiLevel" to Build.VERSION.SDK_INT,
+            "currentOutput" to getCurrentDeviceType(),
+            "outputs" to outputDevices,
+            "decoderMimeTypes" to codecs,
+            "decoderNames" to decoderNames,
+            "refreshRate" to (display?.refreshRate ?: 0f),
+            "maxRefreshRate" to (maxRefresh ?: 0f)
+        )
+    }
+
+    private fun outputTypeName(type: Int): String = when (type) {
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "Bluetooth audio"
+        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Wired headphones"
+        AudioDeviceInfo.TYPE_USB_DEVICE, AudioDeviceInfo.TYPE_USB_HEADSET -> "USB audio"
+        AudioDeviceInfo.TYPE_REMOTE_SUBMIX,
+        AudioDeviceInfo.TYPE_HDMI,
+        AudioDeviceInfo.TYPE_HDMI_ARC,
+        AudioDeviceInfo.TYPE_HDMI_EARC,
+        AudioDeviceInfo.TYPE_DOCK -> "Cast / HDMI audio"
+        else -> "Device speaker"
+    }
+
+    private fun setHighRefreshRate(enabled: Boolean): Boolean {
+        val activity = context as? Activity ?: return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
+        return try {
+            val window = activity.window
+            val display = window.decorView.display
+            val preferredRate = if (enabled) {
+                display?.supportedModes?.maxByOrNull { mode -> mode.refreshRate }?.refreshRate ?: 0f
+            } else {
+                0f
+            }
+            val attributes = window.attributes
+            attributes.preferredRefreshRate = preferredRate
+            window.attributes = attributes
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun emitCurrentDevice() {

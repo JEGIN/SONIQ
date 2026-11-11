@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+
 import '../../../core/models/song_model.dart';
 import '../../../core/services/audio_scanner_service.dart';
 import '../../../core/services/permission_service.dart';
@@ -79,9 +81,12 @@ class LibraryController extends GetxController {
   final RxInt scanTotal = 0.obs;
 
   // Grouped maps
-  final RxMap<String, List<SongModel>> artistsMap = <String, List<SongModel>>{}.obs;
-  final RxMap<String, List<SongModel>> albumsMap = <String, List<SongModel>>{}.obs;
-  final RxMap<String, List<SongModel>> foldersMap = <String, List<SongModel>>{}.obs;
+  final RxMap<String, List<SongModel>> artistsMap =
+      <String, List<SongModel>>{}.obs;
+  final RxMap<String, List<SongModel>> albumsMap =
+      <String, List<SongModel>>{}.obs;
+  final RxMap<String, List<SongModel>> foldersMap =
+      <String, List<SongModel>>{}.obs;
 
   @override
   void onInit() {
@@ -89,11 +94,18 @@ class LibraryController extends GetxController {
     PermissionService.ensureNotificationPermission();
     _loadSavedSortOption();
     loadCachedSongs();
-    debounce(searchQuery, (_) => applyFiltersAndSorting(), time: const Duration(milliseconds: 200));
+    debounce(
+      searchQuery,
+      (_) => applyFiltersAndSorting(),
+      time: const Duration(milliseconds: 200),
+    );
   }
 
   void _loadSavedSortOption() {
-    final saved = cacheService.getSetting('library_sort_option', defaultValue: 'titleAsc');
+    final saved = cacheService.getSetting(
+      'library_sort_option',
+      defaultValue: 'titleAsc',
+    );
     final match = SongSortOption.values.firstWhere(
       (opt) => opt.name == saved,
       orElse: () => SongSortOption.titleAsc,
@@ -111,7 +123,28 @@ class LibraryController extends GetxController {
     }
 
     if (cached.isNotEmpty) {
-      allSongs.assignAll(cached);
+      // Auto-cleanse recordings from existing cache if filter is active
+      final skipRecordings = cacheService.isSkipRecordingsEnabled();
+      final sanitized = cached.where((s) {
+        if (cacheService.isPathExcluded(s.dataPath)) return false;
+        if (!skipRecordings) return true;
+        return !AudioScannerService.isIgnoredRecordingOrSystemAudio(
+          filePath: s.dataPath,
+          title: s.title,
+          artist: s.artist,
+          album: s.album,
+          durationMs: s.durationMs,
+        );
+      }).toList();
+
+      if (sanitized.length != cached.length) {
+        cacheService.saveSongs(sanitized);
+        debugPrint(
+          'SONIQ: Cleansed ${cached.length - sanitized.length} recording files from library cache.',
+        );
+      }
+
+      allSongs.assignAll(sanitized);
       _rebuildGroupings();
       applyFiltersAndSorting();
       ArtworkCacheService().prewarmArtworkCache(allSongs);
@@ -175,29 +208,49 @@ class LibraryController extends GetxController {
     // Apply case-insensitive sorting
     switch (sortOption.value) {
       case SongSortOption.titleAsc:
-        list.sort((a, b) => a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase()));
+        list.sort(
+          (a, b) => a.title.trim().toLowerCase().compareTo(
+            b.title.trim().toLowerCase(),
+          ),
+        );
         break;
       case SongSortOption.titleDesc:
-        list.sort((a, b) => b.title.trim().toLowerCase().compareTo(a.title.trim().toLowerCase()));
+        list.sort(
+          (a, b) => b.title.trim().toLowerCase().compareTo(
+            a.title.trim().toLowerCase(),
+          ),
+        );
         break;
       case SongSortOption.artistAsc:
         list.sort((a, b) {
-          final aUnknown = a.artist.isEmpty || a.artist.toLowerCase().contains('unknown');
-          final bUnknown = b.artist.isEmpty || b.artist.toLowerCase().contains('unknown');
+          final aUnknown =
+              a.artist.isEmpty || a.artist.toLowerCase().contains('unknown');
+          final bUnknown =
+              b.artist.isEmpty || b.artist.toLowerCase().contains('unknown');
           final aArtist = aUnknown ? 'zzz' : a.artist.trim().toLowerCase();
           final bArtist = bUnknown ? 'zzz' : b.artist.trim().toLowerCase();
           final cmp = aArtist.compareTo(bArtist);
-          return cmp != 0 ? cmp : a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
+          return cmp != 0
+              ? cmp
+              : a.title.trim().toLowerCase().compareTo(
+                  b.title.trim().toLowerCase(),
+                );
         });
         break;
       case SongSortOption.artistDesc:
         list.sort((a, b) {
-          final aUnknown = a.artist.isEmpty || a.artist.toLowerCase().contains('unknown');
-          final bUnknown = b.artist.isEmpty || b.artist.toLowerCase().contains('unknown');
+          final aUnknown =
+              a.artist.isEmpty || a.artist.toLowerCase().contains('unknown');
+          final bUnknown =
+              b.artist.isEmpty || b.artist.toLowerCase().contains('unknown');
           final aArtist = aUnknown ? '' : a.artist.trim().toLowerCase();
           final bArtist = bUnknown ? '' : b.artist.trim().toLowerCase();
           final cmp = bArtist.compareTo(aArtist);
-          return cmp != 0 ? cmp : a.title.trim().toLowerCase().compareTo(b.title.trim().toLowerCase());
+          return cmp != 0
+              ? cmp
+              : a.title.trim().toLowerCase().compareTo(
+                  b.title.trim().toLowerCase(),
+                );
         });
         break;
       case SongSortOption.dateAddedDesc:
@@ -222,10 +275,14 @@ class LibraryController extends GetxController {
     final Map<String, List<SongModel>> albums = {};
 
     for (final song in allSongs) {
-      final artistName = song.artist.trim().isNotEmpty ? song.artist.trim() : 'Unknown Artist';
+      final artistName = song.artist.trim().isNotEmpty
+          ? song.artist.trim()
+          : 'Unknown Artist';
       artists.putIfAbsent(artistName, () => []).add(song);
 
-      final albumName = song.album.trim().isNotEmpty ? song.album.trim() : 'Unknown Album';
+      final albumName = song.album.trim().isNotEmpty
+          ? song.album.trim()
+          : 'Unknown Album';
       albums.putIfAbsent(albumName, () => []).add(song);
     }
 

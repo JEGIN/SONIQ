@@ -1,7 +1,9 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:on_audio_query/on_audio_query.dart' as audio_query;
 import 'package:path_provider/path_provider.dart';
+
 import '../models/song_model.dart';
 import '../database/song_cache_service.dart';
 import '../utils/file_utils.dart';
@@ -28,14 +30,16 @@ class AudioScannerService {
     try {
       final hasPermission = await PermissionService.requestMediaPermissions();
       if (!hasPermission) {
-        debugPrint('SONIQ: Media permission not granted. Returning cached songs.');
+        debugPrint(
+          'SONIQ: Media permission not granted. Returning cached songs.',
+        );
         _isScanning = false;
         return _cacheService.getCachedSongs();
       }
 
       // Existing cached songs map (id -> SongModel) to retain favorite and play stats
       final existingCache = {
-        for (final s in _cacheService.getCachedSongs()) s.id: s
+        for (final s in _cacheService.getCachedSongs()) s.id: s,
       };
       final persistedFavoriteIds = _cacheService.getFavoriteSongIds().toSet();
 
@@ -65,7 +69,27 @@ class AudioScannerService {
           if (duration < 10000) continue;
 
           final filePath = song.data;
-          if (seenPaths.contains(filePath) || seenPaths.contains(song.id.toString())) {
+
+          if (_cacheService.isPathExcluded(filePath)) continue;
+
+          // Skip default recordings, voice notes, call recordings, and system audio
+          if (_cacheService.isSkipRecordingsEnabled()) {
+            final shouldSkip = isIgnoredRecordingOrSystemAudio(
+              filePath: filePath,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              durationMs: duration,
+              isMusic: song.isMusic,
+              isRingtone: song.isRingtone,
+              isAlarm: song.isAlarm,
+              isNotification: song.isNotification,
+            );
+            if (shouldSkip) continue;
+          }
+
+          if (seenPaths.contains(filePath) ||
+              seenPaths.contains(song.id.toString())) {
             continue;
           }
           if (filePath.isNotEmpty) {
@@ -75,16 +99,29 @@ class AudioScannerService {
 
           final songId = song.id.toString();
           // Match by id first, or fallback to title+artist match to survive file moves/renames
-          final songTitle = (song.title.trim().isNotEmpty) ? song.title.trim() : song.displayName;
-          final songArtist = (song.artist != null && song.artist != '<unknown>') ? song.artist!.trim() : 'Unknown Artist';
-          final existing = existingCache[songId] ??
-              existingCache.values.where((e) =>
-                  e.title.toLowerCase() == songTitle.toLowerCase() &&
-                  e.artist.toLowerCase() == songArtist.toLowerCase()).firstOrNull;
+          final songTitle = (song.title.trim().isNotEmpty)
+              ? song.title.trim()
+              : song.displayName;
+          final songArtist = (song.artist != null && song.artist != '<unknown>')
+              ? song.artist!.trim()
+              : 'Unknown Artist';
+          final existing =
+              existingCache[songId] ??
+              existingCache.values
+                  .where(
+                    (e) =>
+                        e.title.toLowerCase() == songTitle.toLowerCase() &&
+                        e.artist.toLowerCase() == songArtist.toLowerCase(),
+                  )
+                  .firstOrNull;
 
-          final isFav = (existing?.isFavorite ?? false) || persistedFavoriteIds.contains(songId);
+          final isFav =
+              (existing?.isFavorite ?? false) ||
+              persistedFavoriteIds.contains(songId);
 
-          final ext = FileUtils.getFileExtension(filePath.isNotEmpty ? filePath : song.displayName);
+          final ext = FileUtils.getFileExtension(
+            filePath.isNotEmpty ? filePath : song.displayName,
+          );
 
           final newSong = SongModel(
             id: songId,
@@ -96,7 +133,8 @@ class AudioScannerService {
             durationMs: duration,
             dataPath: filePath.isNotEmpty ? filePath : song.uri ?? '',
             albumArtUri: song.id.toString(),
-            dateAdded: song.dateAdded ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            dateAdded:
+                song.dateAdded ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
             sizeBytes: song.size,
             fileExtension: ext.isNotEmpty ? ext : 'mp3',
             isFavorite: isFav,
@@ -108,18 +146,25 @@ class AudioScannerService {
           scannedSongs.add(newSong);
         }
       } catch (e) {
-        debugPrint('SONIQ: OnAudioQuery error: $e. Falling back to directory scan.');
+        debugPrint(
+          'SONIQ: OnAudioQuery error: $e. Falling back to directory scan.',
+        );
       }
 
       // 2. Directory Fallback Scanner (for direct files or emulators)
       if (scannedSongs.isEmpty) {
-        final fallbackSongs = await _scanCommonDirectories(existingCache, seenPaths);
+        final fallbackSongs = await _scanCommonDirectories(
+          existingCache,
+          seenPaths,
+        );
         scannedSongs.addAll(fallbackSongs);
       }
 
       // Save to Hive cache
       await _cacheService.saveSongs(scannedSongs);
-      debugPrint('SONIQ: Successfully indexed ${scannedSongs.length} local audio tracks.');
+      debugPrint(
+        'SONIQ: Successfully indexed ${scannedSongs.length} local audio tracks.',
+      );
       return scannedSongs;
     } catch (e, stack) {
       debugPrint('SONIQ: Error scanning audio files: $e\n$stack');
@@ -151,8 +196,12 @@ class AudioScannerService {
 
       for (final dir in searchDirs) {
         if (!await dir.exists()) continue;
-        await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        await for (final entity in dir.list(
+          recursive: true,
+          followLinks: false,
+        )) {
           if (entity is File && FileUtils.isSupportedAudioFile(entity.path)) {
+            if (_cacheService.isPathExcluded(entity.path)) continue;
             if (seenPaths.contains(entity.path)) continue;
             seenPaths.add(entity.path);
 
@@ -166,6 +215,16 @@ class AudioScannerService {
 
             // Estimate duration roughly from file size (128kbps ~ 16KB/s) if not indexed
             final estimatedDurationMs = ((stat.size / 16000) * 1000).toInt();
+
+            // Skip default recordings and voice notes
+            if (_cacheService.isSkipRecordingsEnabled()) {
+              final shouldSkip = isIgnoredRecordingOrSystemAudio(
+                filePath: entity.path,
+                title: fileName,
+                durationMs: existing?.durationMs ?? estimatedDurationMs,
+              );
+              if (shouldSkip) continue;
+            }
 
             final song = SongModel(
               id: id,
@@ -193,7 +252,9 @@ class AudioScannerService {
   }
 
   /// Groups songs by containing directory for Folder Browsing
-  static Map<String, List<SongModel>> groupSongsByFolder(List<SongModel> songs) {
+  static Map<String, List<SongModel>> groupSongsByFolder(
+    List<SongModel> songs,
+  ) {
     final Map<String, List<SongModel>> folderMap = {};
     for (final song in songs) {
       if (song.dataPath.isEmpty) continue;
@@ -203,5 +264,114 @@ class AudioScannerService {
       folderMap.putIfAbsent(folder, () => []).add(song);
     }
     return folderMap;
+  }
+
+  /// Directory path patterns representing voice recorders, call recordings, messaging voice notes, and system audio
+  static final List<RegExp> ignoredDirectoryPatterns = [
+    RegExp(r'/recordings?(/|$)', caseSensitive: false),
+    RegExp(r'/sound_?recorders?(/|$)', caseSensitive: false),
+    RegExp(r'/voice_?recorders?(/|$)', caseSensitive: false),
+    RegExp(r'/voice_?records?(/|$)', caseSensitive: false),
+    RegExp(r'/voice_?notes?(/|$)', caseSensitive: false),
+    RegExp(r'/call_?recordings?(/|$)', caseSensitive: false),
+    RegExp(r'/call_?rec(/|$)', caseSensitive: false),
+    RegExp(r'/audio_?recordings?(/|$)', caseSensitive: false),
+    RegExp(r'/audio_?recorder(/|$)', caseSensitive: false),
+    RegExp(r'/recorder(/|$)', caseSensitive: false),
+    RegExp(
+      r'/whatsapp(\s+|_)(voice(\s+|_)notes|audio)(/|$)',
+      caseSensitive: false,
+    ),
+    RegExp(r'/com\.whatsapp(/|$)', caseSensitive: false),
+    RegExp(r'/telegram(\s+|_)audio(/|$)', caseSensitive: false),
+    RegExp(r'/com\.nothing\.soundrecorder(/|$)', caseSensitive: false),
+    RegExp(r'/com\.google\.android\.apps\.recorder(/|$)', caseSensitive: false),
+    RegExp(r'/com\.sec\.android\.app\.voicenote(/|$)', caseSensitive: false),
+    RegExp(r'/com\.coloros\.soundrecorder(/|$)', caseSensitive: false),
+    RegExp(r'/miui/sound_recorder(/|$)', caseSensitive: false),
+    RegExp(r'/notifications?(/|$)', caseSensitive: false),
+    RegExp(r'/ringtones?(/|$)', caseSensitive: false),
+    RegExp(r'/alarms?(/|$)', caseSensitive: false),
+    RegExp(r'/podcasts?(/|$)', caseSensitive: false),
+    RegExp(r'/\.trash(/|$)', caseSensitive: false),
+    RegExp(r'/\.cache(/|$)', caseSensitive: false),
+  ];
+
+  /// Checks whether an audio track belongs to voice recording, call recording, messaging voice note, or system sound
+  static bool isIgnoredRecordingOrSystemAudio({
+    required String filePath,
+    String? title,
+    String? artist,
+    String? album,
+    bool? isMusic,
+    bool? isRingtone,
+    bool? isAlarm,
+    bool? isNotification,
+    int? durationMs,
+  }) {
+    // 1. Android MediaStore explicit non-music system flags
+    if (isRingtone == true || isAlarm == true || isNotification == true) {
+      return true;
+    }
+    if (isMusic == false && (durationMs == null || durationMs < 60000)) {
+      return true;
+    }
+
+    // 2. Minimum duration requirement: Audio shorter than 10 seconds is never a regular music track
+    if (durationMs != null && durationMs > 0 && durationMs < 10000) {
+      return true;
+    }
+
+    final normalizedPath = filePath.replaceAll('\\', '/');
+
+    // 3. Match against known recording & system folders
+    for (final pattern in ignoredDirectoryPatterns) {
+      if (pattern.hasMatch(normalizedPath)) {
+        return true;
+      }
+    }
+
+    // 4. Album / Artist recording indicators
+    final albumLower = (album ?? '').trim().toLowerCase();
+    final artistLower = (artist ?? '').trim().toLowerCase();
+
+    const recordingLabels = {
+      'recordings',
+      'sound recorder',
+      'sound recording',
+      'voice recorder',
+      'voice recordings',
+      'voice notes',
+      'call recordings',
+      'call recording',
+      'call recorder',
+      'recorder',
+      'whatsapp audio',
+      'whatsapp voice notes',
+    };
+
+    if (recordingLabels.contains(albumLower) ||
+        recordingLabels.contains(artistLower)) {
+      return true;
+    }
+
+    // 5. Common call recorder & voice note file prefix heuristic
+    final fileName = normalizedPath.split('/').last.toLowerCase();
+    if (fileName.startsWith('call_') ||
+        fileName.startsWith('rec_') ||
+        fileName.startsWith('recording_') ||
+        fileName.startsWith('voice_') ||
+        fileName.startsWith('audiorecording_') ||
+        fileName.startsWith('ptt-') ||
+        fileName.startsWith('aud-20')) {
+      if (albumLower.isEmpty ||
+          albumLower == 'unknown album' ||
+          albumLower == 'music' ||
+          albumLower == 'download') {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

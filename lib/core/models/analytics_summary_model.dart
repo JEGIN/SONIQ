@@ -14,19 +14,19 @@ enum AnalyticsTimeFilter {
   String get label {
     switch (this) {
       case AnalyticsTimeFilter.today:
-        return 'Today';
+        return 'Daily';
       case AnalyticsTimeFilter.last7Days:
-        return '7 Days';
+        return 'Weekly';
       case AnalyticsTimeFilter.last30Days:
         return '30 Days';
       case AnalyticsTimeFilter.thisMonth:
-        return 'This Month';
+        return 'Monthly';
       case AnalyticsTimeFilter.lastMonth:
         return 'Last Month';
       case AnalyticsTimeFilter.last90Days:
         return '90 Days';
       case AnalyticsTimeFilter.thisYear:
-        return 'This Year';
+        return 'Yearly';
       case AnalyticsTimeFilter.allTime:
         return 'All Time';
       case AnalyticsTimeFilter.custom:
@@ -41,7 +41,11 @@ enum AnalyticsTimeFilter {
         final start = DateTime(now.year, now.month, now.day);
         return DateTimeRange(start: start, end: now);
       case AnalyticsTimeFilter.last7Days:
-        final start = now.subtract(const Duration(days: 7));
+        final start = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 6));
         return DateTimeRange(start: start, end: now);
       case AnalyticsTimeFilter.last30Days:
         final start = now.subtract(const Duration(days: 30));

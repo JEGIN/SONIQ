@@ -6,6 +6,7 @@ import '../../../core/models/smart_playlist_model.dart';
 import '../../../core/models/song_model.dart';
 import '../../home/controllers/home_controller.dart';
 import '../../library/controllers/library_controller.dart';
+import '../../player/controllers/player_controller.dart';
 import '../controllers/smart_playlist_controller.dart';
 
 class SmartPlaylistGeneratorDialog extends StatefulWidget {
@@ -86,10 +87,22 @@ class _SmartPlaylistGeneratorDialogState extends State<SmartPlaylistGeneratorDia
       final home = Get.find<HomeController>();
       if (home.recentlyAdded.isNotEmpty) return home.recentlyAdded.toList();
     }
+    if (Get.isRegistered<AudioPlayerController>()) {
+      final player = Get.find<AudioPlayerController>();
+      if (player.queue.isNotEmpty) return player.queue.toList();
+    }
+    // Auto-trigger cache load if library is empty
+    if (Get.isRegistered<LibraryController>()) {
+      final lib = Get.find<LibraryController>();
+      if (!lib.isScanning.value && lib.allSongs.isEmpty) {
+        Future.microtask(() => lib.loadCachedSongs());
+      }
+    }
     return [];
   }
 
-  int _calculatePreviewCount() {
+  int _calculatePreviewCountWithLibrary(List<SongModel> library) {
+    if (library.isEmpty) return 0;
     final tempRules = SmartPlaylistRules(
       selectedMoods: _selectedMoods,
       energyLevel: _selectedEnergy,
@@ -106,14 +119,12 @@ class _SmartPlaylistGeneratorDialogState extends State<SmartPlaylistGeneratorDia
       createdAt: 0,
     );
 
-    final library = _getLibrary();
     final matches = smartCtrl.evaluatePlaylist(tempPl, library);
     return matches.length;
   }
 
   @override
   Widget build(BuildContext context) {
-    final previewCount = _calculatePreviewCount();
     final isEditing = widget.existingPlaylist != null;
 
     return Material(
@@ -306,40 +317,125 @@ class _SmartPlaylistGeneratorDialogState extends State<SmartPlaylistGeneratorDia
                 color: Color(0xFF0E0B16),
                 border: Border(top: BorderSide(color: AppColors.border, width: 0.8)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$previewCount matching tracks',
-                          style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800, fontSize: 14),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Evaluated from your offline library',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-                        ),
-                      ],
+              child: Obx(() {
+                final lib = Get.isRegistered<LibraryController>()
+                    ? Get.find<LibraryController>()
+                    : null;
+                final isScanning = lib?.isScanning.value ?? false;
+                final currentLibrary = _getLibrary();
+                final previewCount = _calculatePreviewCountWithLibrary(currentLibrary);
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isScanning) ...[
+                            Row(
+                              children: [
+                                const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.gold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Scanning (${lib!.scanCurrent.value}/${lib.scanTotal.value})...',
+                                  style: const TextStyle(
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Discovering offline tracks',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            ),
+                          ] else if (currentLibrary.isEmpty) ...[
+                            Row(
+                              children: [
+                                const Text(
+                                  '0 tracks found',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    if (lib != null) {
+                                      lib.scanLibrary();
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                                    ),
+                                    child: const Text(
+                                      'Scan Music',
+                                      style: TextStyle(
+                                        color: AppColors.gold,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Tap Scan to load audio files',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            ),
+                          ] else ...[
+                            Text(
+                              '$previewCount matching tracks',
+                              style: const TextStyle(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'From ${currentLibrary.length} songs in library',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: isScanning ? null : _savePlaylist,
+                      child: Text(
+                        isEditing ? 'Save Rules' : 'Create Smart Playlist',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                      ),
                     ),
-                    onPressed: _savePlaylist,
-                    child: Text(
-                      isEditing ? 'Save Rules' : 'Create Smart Playlist',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              }),
             ),
           ],
         ),

@@ -105,6 +105,11 @@ class SmartPlaylistService {
 
     // 6. Mood matching
     if (rules.selectedMoods.isNotEmpty) {
+      // If user selected all categories, every track naturally matches
+      if (rules.selectedMoods.length >= 15) {
+        return true;
+      }
+
       final songMoods = <String>{};
       if (classification != null) {
         songMoods.add(classification.primaryMood.toLowerCase());
@@ -118,8 +123,22 @@ class SmartPlaylistService {
         songMoods.add('most played');
       }
 
-      final matchesMood = rules.selectedMoods.any(
-          (m) => songMoods.contains(m.toLowerCase()));
+      final songText = '${song.title} ${song.artist} ${song.album}'.toLowerCase();
+
+      final matchesMood = rules.selectedMoods.any((m) {
+        final mLower = m.toLowerCase();
+        if (songMoods.contains(mLower)) return true;
+        // Direct title/artist lexical match fallback
+        if (mLower == 'tamil melody' && (songText.contains('melody') || classification?.language == 'tamil')) return true;
+        if (mLower == 'tamil kuthu' && (songText.contains('kuthu') || songText.contains('gana'))) return true;
+        if (mLower == 'devotional' && (songText.contains('god') || songText.contains('bhajan') || songText.contains('slokam') || songText.contains('bakthi') || songText.contains('prayer'))) return true;
+        if (mLower == 'instrumental' && (songText.contains('bgm') || songText.contains('theme') || songText.contains('instrumental') || songText.contains('score'))) return true;
+        if (mLower == 'sad & emotional' && (songText.contains('sad') || songText.contains('pain') || songText.contains('tears') || songText.contains('alone'))) return true;
+        if (mLower == 'motivation' && (songText.contains('motivation') || songText.contains('vetri') || songText.contains('power'))) return true;
+        if (mLower == 'workout' && (songText.contains('gym') || songText.contains('workout') || songText.contains('fitness'))) return true;
+        return false;
+      });
+
       if (!matchesMood) return false;
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/analytics_summary_model.dart';
@@ -26,7 +27,10 @@ class AnalyticsDashboardView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Listening Analytics', style: AppTypography.headlineMedium),
+        title: const Text(
+          'Listening Analytics',
+          style: AppTypography.headlineMedium,
+        ),
         actions: [
           // Replay Button (Spotify Wrapped style)
           TextButton.icon(
@@ -38,10 +42,18 @@ class AnalyticsDashboardView extends StatelessWidget {
                 side: const BorderSide(color: AppColors.gold, width: 0.8),
               ),
             ),
-            icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 16),
+            icon: const Icon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.gold,
+              size: 16,
+            ),
             label: const Text(
               'Replay',
-              style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800, fontSize: 12),
+              style: TextStyle(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
             ),
             onPressed: () async {
               await controller.loadReplay();
@@ -55,7 +67,10 @@ class AnalyticsDashboardView extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.textMuted),
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppColors.textMuted,
+            ),
             onPressed: () => Get.to(() => const AnalyticsSettingsView()),
           ),
           const SizedBox(width: 8),
@@ -63,12 +78,19 @@ class AnalyticsDashboardView extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.isLoading.value && controller.summary.value == null) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          );
         }
 
         final summary = controller.summary.value;
         if (summary == null) {
-          return const Center(child: Text('No listening data available.', style: TextStyle(color: AppColors.textMuted)));
+          return const Center(
+            child: Text(
+              'No listening data available.',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+          );
         }
 
         return RefreshIndicator(
@@ -76,7 +98,9 @@ class AnalyticsDashboardView extends StatelessWidget {
           backgroundColor: AppColors.surface,
           onRefresh: () => controller.loadAnalytics(),
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
             children: [
               // 1. Time Filter Carousel
@@ -111,60 +135,70 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 1. TIME FILTER PILLS ---
-  Widget _buildTimeFilterPills(BuildContext context, AnalyticsController controller) {
+  Widget _buildTimeFilterPills(
+    BuildContext context,
+    AnalyticsController controller,
+  ) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
-        children: AnalyticsTimeFilter.values.map((f) {
-          final isSelected = controller.timeFilter.value == f;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(f.label),
-              selected: isSelected,
-              selectedColor: AppColors.gold,
-              backgroundColor: const Color(0xFF1E1A2B),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.black : Colors.white,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: isSelected ? AppColors.gold : AppColors.border,
-                ),
-              ),
-              onSelected: (val) async {
-                if (f == AnalyticsTimeFilter.custom) {
-                  final picked = await showDateRangePicker(
-                    context: context,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                    builder: (context, child) {
-                      return Theme(
-                        data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.dark(
-                            primary: AppColors.gold,
-                            onPrimary: Colors.black,
-                            surface: Color(0xFF191724),
-                          ),
-                        ),
-                        child: child!,
+        children:
+            const [
+              AnalyticsTimeFilter.today,
+              AnalyticsTimeFilter.last7Days,
+              AnalyticsTimeFilter.thisMonth,
+              AnalyticsTimeFilter.thisYear,
+              AnalyticsTimeFilter.allTime,
+            ].map((f) {
+              final isSelected = controller.timeFilter.value == f;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(f.label),
+                  selected: isSelected,
+                  selectedColor: AppColors.gold,
+                  backgroundColor: const Color(0xFF1E1A2B),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.black : Colors.white,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.gold : AppColors.border,
+                    ),
+                  ),
+                  onSelected: (val) async {
+                    if (f == AnalyticsTimeFilter.custom) {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.dark(
+                                primary: AppColors.gold,
+                                onPrimary: Colors.black,
+                                surface: Color(0xFF191724),
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
                       );
-                    },
-                  );
-                  if (picked != null) {
-                    controller.setCustomRange(picked);
-                  }
-                } else {
-                  controller.setTimeFilter(f);
-                }
-              },
-            ),
-          );
-        }).toList(),
+                      if (picked != null) {
+                        controller.setCustomRange(picked);
+                      }
+                    } else {
+                      controller.setTimeFilter(f);
+                    }
+                  },
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -180,7 +214,10 @@ class AnalyticsDashboardView extends StatelessWidget {
           colors: [Color(0xFF2B163B), Color(0xFF181024)],
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 1.2),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -206,19 +243,33 @@ class AnalyticsDashboardView extends StatelessWidget {
               ),
               if (summary.currentStreakDays > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF5722).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFF5722), width: 0.8),
+                    border: Border.all(
+                      color: const Color(0xFFFF5722),
+                      width: 0.8,
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF5722), size: 14),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Color(0xFFFF5722),
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${summary.currentStreakDays}d Streak',
-                        style: const TextStyle(color: Color(0xFFFF5722), fontWeight: FontWeight.w800, fontSize: 11),
+                        style: const TextStyle(
+                          color: Color(0xFFFF5722),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -243,9 +294,15 @@ class AnalyticsDashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniStat('${summary.qualifiedPlays}', 'Qualified Plays'),
-              _buildMiniStat('${(summary.completionRate * 100).round()}%', 'Completion Rate'),
-              _buildMiniStat('${(summary.skipRate * 100).round()}%', 'Skip Rate'),
+              _buildMiniStat('${summary.totalEvents}', 'Play Count'),
+              _buildMiniStat(
+                '${(summary.completionRate * 100).round()}%',
+                'Completion Rate',
+              ),
+              _buildMiniStat(
+                '${(summary.skipRate * 100).round()}%',
+                'Skip Rate',
+              ),
               _buildMiniStat(summary.peakHourLabel, 'Peak Hour'),
             ],
           ),
@@ -258,8 +315,18 @@ class AnalyticsDashboardView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
-        Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+        Text(
+          val,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+        ),
       ],
     );
   }
@@ -311,7 +378,11 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 4. OVERVIEW TAB ---
-  Widget _buildOverviewTab(BuildContext context, AnalyticsController controller, AnalyticsSummaryModel summary) {
+  Widget _buildOverviewTab(
+    BuildContext context,
+    AnalyticsController controller,
+    AnalyticsSummaryModel summary,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -413,22 +484,55 @@ class AnalyticsDashboardView extends StatelessWidget {
               color: AppColors.gold.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.star_rounded, color: AppColors.gold, size: 28),
+            child: const Icon(
+              Icons.star_rounded,
+              color: AppColors.gold,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('MOST PLAYED TRACK', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1)),
+                const Text(
+                  'TOP TRACK',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                    letterSpacing: 1,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
-                Text('${song.subtitle} • ${song.playCount} plays', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                Text(
+                  song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${song.subtitle} • ${song.playCount} plays',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold, size: 36),
+            icon: const Icon(
+              Icons.play_circle_fill_rounded,
+              color: AppColors.gold,
+              size: 36,
+            ),
             onPressed: () => controller.playSongFromAnalytics(song.id),
           ),
         ],
@@ -437,7 +541,11 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 5. TOP MUSIC TAB ---
-  Widget _buildTopMusicTab(BuildContext context, AnalyticsController controller, AnalyticsSummaryModel summary) {
+  Widget _buildTopMusicTab(
+    BuildContext context,
+    AnalyticsController controller,
+    AnalyticsSummaryModel summary,
+  ) {
     final catIdx = controller.topMusicCategoryIndex.value;
 
     return Column(
@@ -445,30 +553,37 @@ class AnalyticsDashboardView extends StatelessWidget {
       children: [
         // Category Switcher: Songs, Artists, Albums, Genres
         Row(
-          children: ['Songs', 'Artists', 'Albums', 'Genres'].asMap().entries.map((entry) {
-            final isSel = catIdx == entry.key;
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: FilterChip(
-                  label: Text(entry.value),
-                  selected: isSel,
-                  selectedColor: AppColors.gold,
-                  backgroundColor: const Color(0xFF1E1A2B),
-                  labelStyle: TextStyle(
-                    color: isSel ? Colors.black : Colors.white,
-                    fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
-                    fontSize: 11,
+          children: ['Songs', 'Artists', 'Albums', 'Genres']
+              .asMap()
+              .entries
+              .map((entry) {
+                final isSel = catIdx == entry.key;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FilterChip(
+                      label: Text(entry.value),
+                      selected: isSel,
+                      selectedColor: AppColors.gold,
+                      backgroundColor: const Color(0xFF1E1A2B),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.black : Colors.white,
+                        fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: isSel ? AppColors.gold : AppColors.border,
+                        ),
+                      ),
+                      onSelected: (_) =>
+                          controller.topMusicCategoryIndex.value = entry.key,
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(color: isSel ? AppColors.gold : AppColors.border),
-                  ),
-                  onSelected: (_) => controller.topMusicCategoryIndex.value = entry.key,
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              })
+              .toList(),
         ),
 
         const SizedBox(height: 16),
@@ -538,10 +653,7 @@ class AnalyticsDashboardView extends StatelessWidget {
             ...summary.topGenres.take(10).toList().asMap().entries.map((e) {
               final rank = e.key + 1;
               final item = e.value;
-              return RankingItemTile(
-                rank: rank,
-                metric: item,
-              );
+              return RankingItemTile(rank: rank, metric: item);
             }),
         ],
       ],
@@ -549,7 +661,10 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 6. TRENDS & HABITS TAB ---
-  Widget _buildTrendsTab(AnalyticsController controller, AnalyticsSummaryModel summary) {
+  Widget _buildTrendsTab(
+    AnalyticsController controller,
+    AnalyticsSummaryModel summary,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -582,7 +697,11 @@ class AnalyticsDashboardView extends StatelessWidget {
             children: [
               const Text(
                 'Personal Listening Streaks',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 14),
               Row(
@@ -599,15 +718,29 @@ class AnalyticsDashboardView extends StatelessWidget {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF5722), size: 18),
+                              Icon(
+                                Icons.local_fire_department_rounded,
+                                color: Color(0xFFFF5722),
+                                size: 18,
+                              ),
                               SizedBox(width: 6),
-                              Text('Current Streak', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              Text(
+                                'Current Streak',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Text(
                             '${summary.currentStreakDays} Days',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                            ),
                           ),
                         ],
                       ),
@@ -626,15 +759,29 @@ class AnalyticsDashboardView extends StatelessWidget {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 18),
+                              Icon(
+                                Icons.emoji_events_rounded,
+                                color: AppColors.gold,
+                                size: 18,
+                              ),
                               SizedBox(width: 6),
-                              Text('Longest Streak', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              Text(
+                                'Longest Streak',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Text(
                             '${summary.longestStreakDays} Days',
-                            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w900, fontSize: 20),
+                            style: const TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                            ),
                           ),
                         ],
                       ),
@@ -650,10 +797,15 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 7. DISCOVERY TAB ---
-  Widget _buildDiscoveryTab(BuildContext context, AnalyticsController controller) {
+  Widget _buildDiscoveryTab(
+    BuildContext context,
+    AnalyticsController controller,
+  ) {
     final disc = controller.discoveryInsights.value;
     if (disc == null || disc.isEmpty) {
-      return _buildEmptyTabNotice('Listen to more songs to unlock personalized discovery insights.');
+      return _buildEmptyTabNotice(
+        'Listen to more songs to unlock personalized discovery insights.',
+      );
     }
 
     return Column(
@@ -662,12 +814,16 @@ class AnalyticsDashboardView extends StatelessWidget {
         if (disc.forgottenFavorites.isNotEmpty)
           _buildDiscoverySection(
             title: 'Forgotten Favorites',
-            subtitle: 'Songs in your Favorites you haven\'t played in over 30 days',
+            subtitle:
+                'Songs in your Favorites you haven\'t played in over 30 days',
             icon: Icons.favorite_border_rounded,
             iconColor: const Color(0xFFFF2A85),
             songs: disc.forgottenFavorites,
             onPlayAll: () => controller.playCollection(disc.forgottenFavorites),
-            onCreatePlaylist: () => controller.createPlaylistFromDiscovery('Forgotten Favorites Mix', disc.forgottenFavorites),
+            onCreatePlaylist: () => controller.createPlaylistFromDiscovery(
+              'Forgotten Favorites Mix',
+              disc.forgottenFavorites,
+            ),
             controller: controller,
           ),
 
@@ -680,7 +836,10 @@ class AnalyticsDashboardView extends StatelessWidget {
             iconColor: AppColors.gold,
             songs: disc.rediscoveredMusic,
             onPlayAll: () => controller.playCollection(disc.rediscoveredMusic),
-            onCreatePlaylist: () => controller.createPlaylistFromDiscovery('Rediscovered Gems', disc.rediscoveredMusic),
+            onCreatePlaylist: () => controller.createPlaylistFromDiscovery(
+              'Rediscovered Gems',
+              disc.rediscoveredMusic,
+            ),
             controller: controller,
           ),
         ],
@@ -694,7 +853,10 @@ class AnalyticsDashboardView extends StatelessWidget {
             iconColor: const Color(0xFF00E676),
             songs: disc.mostReplayedSongs,
             onPlayAll: () => controller.playCollection(disc.mostReplayedSongs),
-            onCreatePlaylist: () => controller.createPlaylistFromDiscovery('On Repeat Heavy', disc.mostReplayedSongs),
+            onCreatePlaylist: () => controller.createPlaylistFromDiscovery(
+              'On Repeat Heavy',
+              disc.mostReplayedSongs,
+            ),
             controller: controller,
           ),
         ],
@@ -707,8 +869,12 @@ class AnalyticsDashboardView extends StatelessWidget {
             icon: Icons.skip_next_rounded,
             iconColor: const Color(0xFFFF5252),
             songs: disc.frequentlySkippedSongs,
-            onPlayAll: () => controller.playCollection(disc.frequentlySkippedSongs),
-            onCreatePlaylist: () => controller.createPlaylistFromDiscovery('Frequently Skipped', disc.frequentlySkippedSongs),
+            onPlayAll: () =>
+                controller.playCollection(disc.frequentlySkippedSongs),
+            onCreatePlaylist: () => controller.createPlaylistFromDiscovery(
+              'Frequently Skipped',
+              disc.frequentlySkippedSongs,
+            ),
             controller: controller,
           ),
         ],
@@ -740,41 +906,88 @@ class AnalyticsDashboardView extends StatelessWidget {
             children: [
               Icon(icon, color: iconColor, size: 20),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.playlist_add_rounded, color: AppColors.gold, size: 22),
+                icon: const Icon(
+                  Icons.playlist_add_rounded,
+                  color: AppColors.gold,
+                  size: 22,
+                ),
                 tooltip: 'Save as Playlist',
                 onPressed: onCreatePlaylist,
               ),
               IconButton(
-                icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 26),
+                icon: const Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: AppColors.primary,
+                  size: 26,
+                ),
                 tooltip: 'Play All',
                 onPressed: onPlayAll,
               ),
             ],
           ),
-          Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          Text(
+            subtitle,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+          ),
           const SizedBox(height: 12),
-          ...songs.take(4).map((s) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF262135),
-                    borderRadius: BorderRadius.circular(8),
+          ...songs
+              .take(4)
+              .map(
+                (s) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF262135),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.music_note_rounded,
+                      color: AppColors.textMuted,
+                      size: 18,
+                    ),
                   ),
-                  child: const Icon(Icons.music_note_rounded, color: AppColors.textMuted, size: 18),
+                  title: Text(
+                    s.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    s.artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: AppColors.gold,
+                      size: 20,
+                    ),
+                    onPressed: () => controller.playSongFromAnalytics(s.id),
+                  ),
                 ),
-                title: Text(s.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                subtitle: Text(s.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.play_arrow_rounded, color: AppColors.gold, size: 20),
-                  onPressed: () => controller.playSongFromAnalytics(s.id),
-                ),
-              )),
+              ),
         ],
       ),
     );
@@ -786,7 +999,11 @@ class AnalyticsDashboardView extends StatelessWidget {
       alignment: Alignment.center,
       child: Column(
         children: [
-          const Icon(Icons.insights_rounded, color: AppColors.textMuted, size: 36),
+          const Icon(
+            Icons.insights_rounded,
+            color: AppColors.textMuted,
+            size: 36,
+          ),
           const SizedBox(height: 12),
           Text(
             message,

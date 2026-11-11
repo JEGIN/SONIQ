@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../../../core/database/song_cache_service.dart';
 import '../../../core/models/analytics_summary_model.dart';
 import '../../../core/models/discovery_insights_model.dart';
@@ -13,18 +14,22 @@ import '../../player/controllers/player_controller.dart';
 import '../../playlists/controllers/playlist_controller.dart';
 
 class AnalyticsController extends GetxController {
-  final ListeningAnalyticsService _analyticsService = ListeningAnalyticsService();
+  final ListeningAnalyticsService _analyticsService =
+      ListeningAnalyticsService();
   final SongCacheService _cacheService = SongCacheService();
 
-  final Rx<AnalyticsTimeFilter> timeFilter = AnalyticsTimeFilter.last30Days.obs;
+  final Rx<AnalyticsTimeFilter> timeFilter = AnalyticsTimeFilter.last7Days.obs;
   final Rx<DateTimeRange?> customRange = Rx<DateTimeRange?>(null);
   final Rx<AnalyticsSummaryModel?> summary = Rx<AnalyticsSummaryModel?>(null);
-  final Rx<DiscoveryInsightsModel?> discoveryInsights = Rx<DiscoveryInsightsModel?>(null);
+  final Rx<DiscoveryInsightsModel?> discoveryInsights =
+      Rx<DiscoveryInsightsModel?>(null);
   final Rx<SoniqReplayModel?> replayModel = Rx<SoniqReplayModel?>(null);
 
   final RxBool isLoading = false.obs;
-  final RxInt selectedTabIndex = 0.obs; // 0: Overview, 1: Top Music, 2: Trends, 3: Discovery
-  final RxInt topMusicCategoryIndex = 0.obs; // 0: Songs, 1: Artists, 2: Albums, 3: Genres
+  final RxInt selectedTabIndex =
+      0.obs; // 0: Overview, 1: Top Music, 2: Trends, 3: Discovery
+  final RxInt topMusicCategoryIndex =
+      0.obs; // 0: Songs, 1: Artists, 2: Albums, 3: Genres
   final RxBool isTrackingEnabled = true.obs;
   final RxInt playCountThresholdSeconds = 30.obs;
 
@@ -32,7 +37,8 @@ class AnalyticsController extends GetxController {
   void onInit() {
     super.onInit();
     isTrackingEnabled.value = _cacheService.isAnalyticsTrackingEnabled();
-    playCountThresholdSeconds.value = _cacheService.getPlayCountThresholdSeconds();
+    playCountThresholdSeconds.value = _cacheService
+        .getPlayCountThresholdSeconds();
     loadAnalytics();
   }
 
@@ -153,7 +159,10 @@ class AnalyticsController extends GetxController {
     }
   }
 
-  Future<void> createPlaylistFromDiscovery(String name, List<SongModel> songs) async {
+  Future<void> createPlaylistFromDiscovery(
+    String name,
+    List<SongModel> songs,
+  ) async {
     if (songs.isEmpty) return;
     if (!Get.isRegistered<PlaylistController>()) return;
 
