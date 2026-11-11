@@ -243,9 +243,12 @@ class SoniqAudioHandler extends BaseAudioHandler {
           return;
         }
         if (_player.loopMode == LoopMode.one) {
-          _player.seek(Duration.zero);
           _playbackIntent = PlaybackIntent.playing;
+          _interruptedRevision = -1;
+          _intentRevision++;
+          _player.seek(Duration.zero);
           _player.play();
+          _broadcastPlaybackState();
         } else {
           skipToNext();
         }
@@ -565,6 +568,8 @@ class SoniqAudioHandler extends BaseAudioHandler {
     final removed = _effectivePlaylist.removeAt(index);
 
     if (index == _currentIndex) {
+      final wasPlaying =
+          _playbackIntent == PlaybackIntent.playing && _player.playing;
       if (_effectivePlaylist.isEmpty) {
         _currentIndex = -1;
         _player.stop();
@@ -573,7 +578,7 @@ class SoniqAudioHandler extends BaseAudioHandler {
         if (_currentIndex >= _effectivePlaylist.length) {
           _currentIndex = _effectivePlaylist.length - 1;
         }
-        _loadAndPlayCurrent();
+        _loadAndPlayCurrent(autoPlay: wasPlaying);
       }
     } else if (index < _currentIndex) {
       _currentIndex -= 1;
@@ -726,9 +731,48 @@ class SoniqAudioHandler extends BaseAudioHandler {
     }
   }
 
-  Future<void> _loadAndPlayCurrent() async {
+  Future<void> _loadAndPlayCurrent({bool autoPlay = true}) async {
     if (_currentIndex < 0 || _currentIndex >= _effectivePlaylist.length) return;
     final song = _effectivePlaylist[_currentIndex];
+
+    if (!autoPlay) {
+      _playbackIntent = PlaybackIntent.manualPause;
+      _interruptedRevision = -1;
+      _intentRevision++;
+
+      final immediateItem = _songToMediaItem(song);
+      mediaItem.add(immediateItem);
+      _broadcastPlaybackState();
+
+      _artworkService.getArtworkUriForSong(song.id).then((artUri) {
+        if (artUri != null && currentSong?.id == song.id) {
+          mediaItem.add(_songToMediaItem(song, artUriOverride: artUri));
+        }
+      });
+
+      try {
+        if (song.dataPath.startsWith('http://') ||
+            song.dataPath.startsWith('https://')) {
+          await _player.setUrl(song.dataPath);
+        } else {
+          final file = File(song.dataPath);
+          if (await file.exists()) {
+            try {
+              await _player.setFilePath(song.dataPath);
+            } catch (e) {
+              debugPrint('SONIQ: Corrupt audio file: ${song.dataPath} ($e)');
+              return;
+            }
+          }
+        }
+        await _player.pause();
+        _broadcastPlaybackState();
+        persistCurrentQueue();
+      } catch (e) {
+        debugPrint('SONIQ: Error loading audio without autoplay: $e');
+      }
+      return;
+    }
 
     _playbackIntent = PlaybackIntent.playing;
     _interruptedRevision = -1;
@@ -1057,8 +1101,27 @@ class SoniqAudioHandler extends BaseAudioHandler {
     if (_effectivePlaylist.length == 1) {
       if (_player.loopMode == LoopMode.all ||
           _player.loopMode == LoopMode.one) {
-        await _player.seek(Duration.zero);
-        await _player.play();
+        _playbackIntent = PlaybackIntent.playing;
+        _interruptedRevision = -1;
+        final currentRev = ++_intentRevision;
+        try {
+          final session = await AudioSession.instance;
+          final granted = await session.setActive(true);
+          if (!granted) {
+            _playbackIntent = PlaybackIntent.manualPause;
+            _broadcastPlaybackState();
+            return;
+          }
+          if (_playbackIntent != PlaybackIntent.playing ||
+              currentRev != _intentRevision) {
+            return;
+          }
+          await _player.seek(Duration.zero);
+          await _player.play();
+          _broadcastPlaybackState();
+        } catch (e) {
+          debugPrint('SONIQ: Error in single-song loop replay: $e');
+        }
       } else {
         await pause();
         await _player.seek(Duration.zero);

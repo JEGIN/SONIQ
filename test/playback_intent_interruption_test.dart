@@ -34,6 +34,28 @@ class PlaybackIntentStateMachine {
     isPlaying = false;
   }
 
+  void loadTrack({required bool autoPlay, required String songId}) {
+    currentSongId = songId;
+    if (!autoPlay) {
+      playbackIntent = PlaybackIntent.manualPause;
+      interruptedRevision = -1;
+      intentRevision++;
+      isPlaying = false;
+    } else {
+      playbackIntent = PlaybackIntent.playing;
+      interruptedRevision = -1;
+      intentRevision++;
+      isPlaying = true;
+    }
+  }
+
+  void removeFromQueue({required bool isCurrentTrack, required String nextSongId}) {
+    if (isCurrentTrack) {
+      final wasPlaying = playbackIntent == PlaybackIntent.playing && isPlaying;
+      loadTrack(autoPlay: wasPlaying, songId: nextSongId);
+    }
+  }
+
   void handleBecomingNoisy() {
     playbackIntent = PlaybackIntent.manualPause;
     interruptedRevision = -1;
@@ -301,6 +323,43 @@ void main() {
       expect(machine.intentRevision, greaterThan(recordedIntRev));
 
       // Interruption ends
+      machine.handleInterruption(
+        AudioInterruptionEvent(false, AudioInterruptionType.pause),
+      );
+      expect(machine.isPlaying, isFalse);
+      expect(machine.playbackIntent, equals(PlaybackIntent.manualPause));
+    });
+
+    test('Scenario K: Removing current track from queue while paused remains paused without auto-play', () {
+      machine.userPlay(songId: 'song_1');
+      machine.userPause();
+      expect(machine.isPlaying, isFalse);
+      expect(machine.playbackIntent, equals(PlaybackIntent.manualPause));
+
+      // User deletes currently paused track from queue
+      machine.removeFromQueue(isCurrentTrack: true, nextSongId: 'song_2');
+      expect(machine.currentSongId, equals('song_2'));
+      expect(machine.isPlaying, isFalse);
+      expect(machine.playbackIntent, equals(PlaybackIntent.manualPause));
+
+      // External focus event happens later
+      machine.handleInterruption(
+        AudioInterruptionEvent(false, AudioInterruptionType.pause),
+      );
+      expect(machine.isPlaying, isFalse);
+      expect(machine.playbackIntent, equals(PlaybackIntent.manualPause));
+    });
+
+    test('Scenario L: Restoring persisted queue sets manualPause and never auto-plays without user interaction', () {
+      // Simulate app start / restoration
+      machine.loadTrack(autoPlay: false, songId: 'restored_song');
+      expect(machine.playbackIntent, equals(PlaybackIntent.manualPause));
+      expect(machine.isPlaying, isFalse);
+
+      // Instagram, reels, YouTube open and close
+      machine.handleInterruption(
+        AudioInterruptionEvent(true, AudioInterruptionType.pause),
+      );
       machine.handleInterruption(
         AudioInterruptionEvent(false, AudioInterruptionType.pause),
       );
