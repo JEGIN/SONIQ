@@ -37,13 +37,14 @@ class MainNavigationScreen extends StatelessWidget {
             // Screen Pages indexed stack
             IndexedStack(index: currentIndex, children: _screens),
 
-            // Persistent Mini Player above bottom bar
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: MiniPlayerWidget(),
-            ),
+            // Persistent Mini Player above bottom bar (hidden on Audio Studio tab so ringtone cutter controls are unobstructed)
+            if (currentIndex != 4)
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: MiniPlayerWidget(),
+              ),
           ],
         ),
         bottomNavigationBar: Container(
