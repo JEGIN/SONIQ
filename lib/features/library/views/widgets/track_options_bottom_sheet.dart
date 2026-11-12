@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
+
+import '../../../../app/localization/soniq_localizations.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/models/song_model.dart';
@@ -19,6 +21,7 @@ class TrackOptionsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     final playerController = Get.find<AudioPlayerController>();
     final playlistController = Get.find<PlaylistController>();
     final navController = Get.find<NavigationController>();
@@ -65,7 +68,9 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                           '${song.artist} • ${song.formattedDuration} • ${song.formattedSize}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -77,8 +82,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             const Divider(color: AppColors.border, height: 1),
 
             ListTile(
-              leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.primary),
-              title: const Text('Play Next'),
+              leading: const Icon(
+                Icons.play_circle_outline_rounded,
+                color: AppColors.primary,
+              ),
+              title: Text(strings.text('playNext')),
               onTap: () {
                 Navigator.pop(context);
                 playerController.playNext(song);
@@ -93,8 +101,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             ),
 
             ListTile(
-              leading: const Icon(Icons.queue_music_rounded, color: AppColors.gold),
-              title: const Text('Add to Queue'),
+              leading: const Icon(
+                Icons.queue_music_rounded,
+                color: AppColors.gold,
+              ),
+              title: Text(strings.text('addToQueue')),
               onTap: () {
                 Navigator.pop(context);
                 playerController.addToQueue(song);
@@ -111,7 +122,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             if (song.album.isNotEmpty && song.album != 'Unknown Album')
               ListTile(
                 leading: const Icon(Icons.album_rounded, color: AppColors.gold),
-                title: Text('Add Album to Queue ("${song.album}")'),
+                title: Text(
+                  strings
+                      .text('addAlbumQueueTitle')
+                      .replaceAll('{album}', song.album),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   playerController.addAlbumToQueue(song.album);
@@ -127,8 +142,15 @@ class TrackOptionsBottomSheet extends StatelessWidget {
 
             if (song.artist.isNotEmpty && song.artist != 'Unknown Artist')
               ListTile(
-                leading: const Icon(Icons.person_rounded, color: AppColors.secondary),
-                title: Text('Add Artist to Queue ("${song.artist}")'),
+                leading: const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.secondary,
+                ),
+                title: Text(
+                  strings
+                      .text('addArtistQueueTitle')
+                      .replaceAll('{artist}', song.artist),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   playerController.addArtistToQueue(song.artist);
@@ -143,9 +165,18 @@ class TrackOptionsBottomSheet extends StatelessWidget {
               ),
 
             ListTile(
-              leading: const Icon(Icons.content_cut_rounded, color: AppColors.primary),
-              title: const Text('Open in Audio Studio'),
-              subtitle: const Text('Trim & create custom ringtones', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              leading: const Icon(
+                Icons.content_cut_rounded,
+                color: AppColors.primary,
+              ),
+              title: Text(strings.text('openInAudioStudio')),
+              subtitle: Text(
+                strings.text('trimCreateRingtones'),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 navController.openStudioWithSong(song);
@@ -153,8 +184,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             ),
 
             ListTile(
-              leading: const Icon(Icons.playlist_add_rounded, color: AppColors.secondary),
-              title: const Text('Add to Playlist'),
+              leading: const Icon(
+                Icons.playlist_add_rounded,
+                color: AppColors.secondary,
+              ),
+              title: Text(strings.text('addToPlaylist')),
               onTap: () {
                 Navigator.pop(context);
                 _showAddToPlaylistDialog(context, playlistController, song);
@@ -171,10 +205,18 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                     final isFav = favCtrl.isFavorite(song.id);
                     return ListTile(
                       leading: Icon(
-                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                        color: isFav ? AppColors.primary : AppColors.textPrimary,
+                        isFav
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: isFav
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
                       ),
-                      title: Text(isFav ? 'Remove from Favorites' : 'Add to Favorites'),
+                      title: Text(
+                        isFav
+                            ? strings.text('removeFavorite')
+                            : strings.text('addFavorite'),
+                      ),
                       onTap: () {
                         Navigator.pop(context);
                         favCtrl.toggleFavorite(song);
@@ -184,10 +226,18 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                 }
                 return ListTile(
                   leading: Icon(
-                    song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: song.isFavorite ? AppColors.primary : AppColors.textPrimary,
+                    song.isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: song.isFavorite
+                        ? AppColors.primary
+                        : AppColors.textPrimary,
                   ),
-                  title: Text(song.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'),
+                  title: Text(
+                    song.isFavorite
+                        ? strings.text('removeFavorite')
+                        : strings.text('addFavorite'),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     playerController.toggleFavorite(song);
@@ -197,8 +247,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             ),
 
             ListTile(
-              leading: const Icon(Icons.insights_rounded, color: AppColors.gold),
-              title: const Text('View Song Analytics'),
+              leading: const Icon(
+                Icons.insights_rounded,
+                color: AppColors.gold,
+              ),
+              title: Text(strings.text('viewSongAnalytics')),
               onTap: () {
                 Navigator.pop(context);
                 EntityAnalyticsSheet.show(
@@ -213,19 +266,35 @@ class TrackOptionsBottomSheet extends StatelessWidget {
 
             ListTile(
               leading: const Icon(Icons.radio_rounded, color: AppColors.gold),
-              title: const Text('Song Radio / Similar Songs'),
-              subtitle: const Text('Discover tracks matching this vibe & tempo', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              title: Text(strings.text('songRadioSimilar')),
+              subtitle: Text(
+                strings.text('discoverVibeTempo'),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 SimilarSongsSheet.show(context, song);
               },
             ),
 
-            if (song.artist.isNotEmpty && song.artist.toLowerCase() != 'unknown')
+            if (song.artist.isNotEmpty &&
+                song.artist.toLowerCase() != 'unknown')
               ListTile(
-                leading: const Icon(Icons.hub_rounded, color: Color(0xFF00ACC1)),
+                leading: const Icon(
+                  Icons.hub_rounded,
+                  color: Color(0xFF00ACC1),
+                ),
                 title: Text('Start ${song.artist} Radio'),
-                subtitle: const Text('Music by this artist and related styles', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                subtitle: Text(
+                  strings.text('artistAndRelatedStyles'),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   final discoveryCtrl = Get.isRegistered<DiscoveryController>()
@@ -236,8 +305,11 @@ class TrackOptionsBottomSheet extends StatelessWidget {
               ),
 
             ListTile(
-              leading: const Icon(Icons.share_rounded, color: AppColors.textPrimary),
-              title: const Text('Share Audio File'),
+              leading: const Icon(
+                Icons.share_rounded,
+                color: AppColors.textPrimary,
+              ),
+              title: Text(strings.text('shareAudioFile')),
               onTap: () {
                 Navigator.pop(context);
                 if (song.dataPath.isNotEmpty) {
@@ -248,13 +320,19 @@ class TrackOptionsBottomSheet extends StatelessWidget {
             ),
 
             ListTile(
-              leading: const Icon(Icons.info_outline_rounded, color: AppColors.textMuted),
-              title: const Text('File Information'),
+              leading: const Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.textMuted,
+              ),
+              title: Text(strings.text('fileInformation')),
               subtitle: Text(
                 song.dataPath,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                ),
               ),
               onTap: () {},
             ),
@@ -283,7 +361,10 @@ class TrackOptionsBottomSheet extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Add to Playlist', style: AppTypography.headlineSmall),
+              child: Text(
+                'Add to Playlist',
+                style: AppTypography.headlineSmall,
+              ),
             ),
             if (controller.playlists.isEmpty)
               const Padding(
@@ -291,15 +372,20 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                 child: Text('No playlists created yet. Create one first!'),
               )
             else
-              ...controller.playlists.map((pl) => ListTile(
-                    leading: const Icon(Icons.queue_music_rounded, color: AppColors.secondary),
-                    title: Text(pl.name),
-                    subtitle: Text('${pl.songCount} tracks'),
-                    onTap: () {
-                      controller.addSongToPlaylist(pl.id, song);
-                      Navigator.pop(context);
-                    },
-                  )),
+              ...controller.playlists.map(
+                (pl) => ListTile(
+                  leading: const Icon(
+                    Icons.queue_music_rounded,
+                    color: AppColors.secondary,
+                  ),
+                  title: Text(pl.name),
+                  subtitle: Text('${pl.songCount} tracks'),
+                  onTap: () {
+                    controller.addSongToPlaylist(pl.id, song);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
           ],
         ),
       ),

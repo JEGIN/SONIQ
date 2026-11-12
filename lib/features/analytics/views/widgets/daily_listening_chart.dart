@@ -1,6 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/models/analytics_summary_model.dart';
 
@@ -34,7 +36,10 @@ class _DailyListeningChartState extends State<DailyListeningChart> {
       );
     }
 
-    final maxMinutes = widget.metrics.fold<int>(1, (maxVal, m) => max(maxVal, m.listeningMinutes));
+    final maxMinutes = widget.metrics.fold<int>(
+      1,
+      (maxVal, m) => max(maxVal, m.listeningMinutes),
+    );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -52,12 +57,21 @@ class _DailyListeningChartState extends State<DailyListeningChart> {
             children: [
               const Text(
                 'Daily Listening Trend',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
-              if (_selectedIndex != null && _selectedIndex! < widget.metrics.length) ...[
+              if (_selectedIndex != null &&
+                  _selectedIndex! < widget.metrics.length) ...[
                 Text(
-                  '${DateFormat('MMM d').format(widget.metrics[_selectedIndex!].date)}: ${widget.metrics[_selectedIndex!].listeningMinutes}m (${widget.metrics[_selectedIndex!].qualifiedPlays} plays)',
-                  style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800, fontSize: 11),
+                  '${DateFormat('MMM d').format(widget.metrics[_selectedIndex!].date)}: ${NumberFormat.decimalPattern().format(widget.metrics[_selectedIndex!].listeningMinutes)}m (${NumberFormat.decimalPattern().format(widget.metrics[_selectedIndex!].qualifiedPlays)} plays)',
+                  style: const TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
                 ),
               ] else ...[
                 const Text(
@@ -76,8 +90,14 @@ class _DailyListeningChartState extends State<DailyListeningChart> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return GestureDetector(
-                  onPanDown: (details) => _handleTouch(details.localPosition.dx, constraints.maxWidth),
-                  onPanUpdate: (details) => _handleTouch(details.localPosition.dx, constraints.maxWidth),
+                  onPanDown: (details) => _handleTouch(
+                    details.localPosition.dx,
+                    constraints.maxWidth,
+                  ),
+                  onPanUpdate: (details) => _handleTouch(
+                    details.localPosition.dx,
+                    constraints.maxWidth,
+                  ),
                   child: CustomPaint(
                     size: Size(constraints.maxWidth, 140),
                     painter: _DailyChartPainter(
@@ -99,16 +119,26 @@ class _DailyListeningChartState extends State<DailyListeningChart> {
             children: [
               Text(
                 DateFormat('MMM d').format(widget.metrics.first.date),
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10,
+                ),
               ),
               if (widget.metrics.length > 2)
                 Text(
-                  DateFormat('MMM d').format(widget.metrics[widget.metrics.length ~/ 2].date),
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                  DateFormat('MMM d')
+                      .format(widget.metrics[widget.metrics.length ~/ 2].date),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                  ),
                 ),
               Text(
                 DateFormat('MMM d').format(widget.metrics.last.date),
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10,
+                ),
               ),
             ],
           ),
@@ -120,7 +150,10 @@ class _DailyListeningChartState extends State<DailyListeningChart> {
   void _handleTouch(double touchX, double totalWidth) {
     if (widget.metrics.isEmpty) return;
     final itemWidth = totalWidth / widget.metrics.length;
-    final index = (touchX / itemWidth).floor().clamp(0, widget.metrics.length - 1);
+    final index = (touchX / itemWidth).floor().clamp(
+      0,
+      widget.metrics.length - 1,
+    );
     setState(() {
       _selectedIndex = index;
     });
@@ -150,7 +183,11 @@ class _DailyChartPainter extends CustomPainter {
     final baselinePaint = Paint()
       ..color = AppColors.borderLight.withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
-    canvas.drawLine(Offset(0, size.height), Offset(size.width, size.height), baselinePaint);
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, size.height),
+      baselinePaint,
+    );
 
     for (int i = 0; i < n; i++) {
       final m = metrics[i];

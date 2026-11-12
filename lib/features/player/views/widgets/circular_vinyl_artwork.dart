@@ -1,7 +1,10 @@
 import 'dart:math';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/localization/soniq_localizations.dart';
 import '../../../../core/models/song_model.dart';
 import '../../../../core/services/artwork_cache_service.dart';
 
@@ -27,6 +30,7 @@ class _CircularVinylArtworkState extends State<CircularVinylArtwork>
   final ArtworkCacheService _artService = ArtworkCacheService();
   Uint8List? _cachedArtworkBytes;
   String? _loadedSongId;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -35,10 +39,22 @@ class _CircularVinylArtworkState extends State<CircularVinylArtwork>
       vsync: this,
       duration: const Duration(seconds: 24),
     );
-    if (widget.isPlaying) {
-      _rotationController.repeat();
-    }
     _loadArtwork(widget.song.id);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
+    _syncRotation();
+  }
+
+  void _syncRotation() {
+    if (widget.isPlaying && !_reduceMotion) {
+      _rotationController.repeat();
+    } else {
+      _rotationController.stop();
+    }
   }
 
   void _loadArtwork(String songId) async {
@@ -56,11 +72,7 @@ class _CircularVinylArtworkState extends State<CircularVinylArtwork>
   void didUpdateWidget(covariant CircularVinylArtwork oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
-      if (widget.isPlaying) {
-        _rotationController.repeat();
-      } else {
-        _rotationController.stop();
-      }
+      _syncRotation();
     }
     if (widget.song.id != oldWidget.song.id) {
       _loadArtwork(widget.song.id);
@@ -75,76 +87,87 @@ class _CircularVinylArtworkState extends State<CircularVinylArtwork>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size.width * 0.72;
+    final viewport = MediaQuery.sizeOf(context);
+    final size = min(viewport.width * 0.72, viewport.height * 0.44);
 
-    return Center(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // 1. Golden Circular Progress Ring (Repainted only when progress changes)
-            RepaintBoundary(
-              child: CustomPaint(
-                size: Size(size, size),
-                painter: _CircularProgressRingPainter(
-                  progress: widget.progress,
-                  trackColor: AppColors.surfaceHighlight.withValues(alpha: 0.35),
-                  progressColor: AppColors.gold,
+    return Semantics(
+      image: true,
+      label:
+          '${SoniqLocalizations.of(context).text('albumArtwork')}: ${widget.song.album}, ${widget.song.artist}',
+      child: ExcludeSemantics(
+        child: Center(
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. Golden Circular Progress Ring (Repainted only when progress changes)
+                RepaintBoundary(
+                  child: CustomPaint(
+                    size: Size(size, size),
+                    painter: _CircularProgressRingPainter(
+                      progress: widget.progress,
+                      trackColor: AppColors.surfaceHighlight.withValues(
+                        alpha: 0.35,
+                      ),
+                      progressColor: AppColors.gold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
-            // 2. Rotating Vinyl Disc (Cached image, isolated from progress rebuilds)
-            RepaintBoundary(
-              child: AnimatedBuilder(
-                animation: _rotationController,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle: _rotationController.value * 2 * pi,
-                    child: child,
-                  );
-                },
-                child: Container(
-                  width: size * 0.82,
-                  height: size * 0.82,
+                // 2. Rotating Vinyl Disc (Cached image, isolated from progress rebuilds)
+                RepaintBoundary(
+                  child: AnimatedBuilder(
+                    animation: _rotationController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _rotationController.value * 2 * pi,
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: size * 0.82,
+                      height: size * 0.82,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF14151C),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            blurRadius: 20,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                        border: Border.all(
+                          color: const Color(0xFF282A36),
+                          width: 3,
+                        ),
+                      ),
+                      child: ClipOval(child: _buildArtworkContent()),
+                    ),
+                  ),
+                ),
+
+                // 3. Center Vinyl Spindle Hole
+                Container(
+                  width: 26,
+                  height: 26,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF14151C),
+                    color: AppColors.background,
+                    border: Border.all(color: AppColors.gold, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 20,
-                        spreadRadius: 4,
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 4,
                       ),
                     ],
-                    border: Border.all(color: const Color(0xFF282A36), width: 3),
-                  ),
-                  child: ClipOval(
-                    child: _buildArtworkContent(),
                   ),
                 ),
-              ),
+              ],
             ),
-
-            // 3. Center Vinyl Spindle Hole
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.background,
-                border: Border.all(color: AppColors.gold, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

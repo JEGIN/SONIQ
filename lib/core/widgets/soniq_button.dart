@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_typography.dart';
+import '../../app/theme/app_tokens.dart';
 
 enum SoniqButtonVariant { primary, secondary, outline, text, gold }
 
@@ -26,6 +28,8 @@ class SoniqButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final effectiveHeight = height * textScale.clamp(1.0, 2.0);
     BoxDecoration decoration;
     TextStyle textStyle;
 
@@ -33,7 +37,7 @@ class SoniqButton extends StatelessWidget {
       case SoniqButtonVariant.primary:
         decoration = BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTokens.radiusControl),
           boxShadow: [
             BoxShadow(
               color: AppColors.primaryGlow,
@@ -48,7 +52,7 @@ class SoniqButton extends StatelessWidget {
       case SoniqButtonVariant.gold:
         decoration = BoxDecoration(
           gradient: AppColors.goldGradient,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTokens.radiusControl),
           boxShadow: [
             BoxShadow(
               color: AppColors.goldGlow,
@@ -57,22 +61,26 @@ class SoniqButton extends StatelessWidget {
             ),
           ],
         );
-        textStyle = AppTypography.labelLarge.copyWith(color: AppColors.textDark);
+        textStyle = AppTypography.labelLarge.copyWith(
+          color: AppColors.textDark,
+        );
         break;
 
       case SoniqButtonVariant.secondary:
         decoration = BoxDecoration(
           color: AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTokens.radiusControl),
           border: Border.all(color: AppColors.borderLight, width: 1),
         );
-        textStyle = AppTypography.labelLarge.copyWith(color: AppColors.textPrimary);
+        textStyle = AppTypography.labelLarge.copyWith(
+          color: AppColors.textPrimary,
+        );
         break;
 
       case SoniqButtonVariant.outline:
         decoration = BoxDecoration(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTokens.radiusControl),
           border: Border.all(color: AppColors.primary, width: 1.5),
         );
         textStyle = AppTypography.labelLarge.copyWith(color: AppColors.primary);
@@ -80,35 +88,46 @@ class SoniqButton extends StatelessWidget {
 
       case SoniqButtonVariant.text:
         decoration = const BoxDecoration();
-        textStyle = AppTypography.labelLarge.copyWith(color: AppColors.textSecondary);
+        textStyle = AppTypography.labelLarge.copyWith(
+          color: AppColors.textSecondary,
+        );
         break;
     }
 
     return Container(
       width: width,
-      height: height,
+      constraints: BoxConstraints(minHeight: effectiveHeight),
       decoration: decoration,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: isLoading ? null : onPressed,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTokens.radiusControl),
           child: Center(
             child: isLoading
                 ? const SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (icon != null) ...[
-                        icon!,
-                        const SizedBox(width: 8),
-                      ],
-                      Text(text, style: textStyle),
+                      if (icon != null) ...[icon!, const SizedBox(width: 8)],
+                      Flexible(
+                        child: Text(
+                          text,
+                          maxLines: 2,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: textStyle,
+                        ),
+                      ),
                     ],
                   ),
           ),

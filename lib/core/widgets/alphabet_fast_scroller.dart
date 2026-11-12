@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../app/theme/app_colors.dart';
 import '../../core/models/song_model.dart';
 
@@ -9,6 +10,7 @@ class AlphabetFastScroller extends StatefulWidget {
   final double itemExtent;
   final Widget child;
   final bool isArtistSort;
+  final bool enabled;
 
   const AlphabetFastScroller({
     super.key,
@@ -17,6 +19,7 @@ class AlphabetFastScroller extends StatefulWidget {
     required this.child,
     this.itemExtent = 72.0,
     this.isArtistSort = false,
+    this.enabled = true,
   });
 
   @override
@@ -25,8 +28,33 @@ class AlphabetFastScroller extends StatefulWidget {
 
 class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
   static const List<String> _alphabet = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#'
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'I',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'O',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'U',
+    'V',
+    'W',
+    'X',
+    'Y',
+    'Z',
+    '#',
   ];
 
   String? _activeLetter;
@@ -45,7 +73,8 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
   @override
   void didUpdateWidget(covariant AlphabetFastScroller oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.songs != oldWidget.songs || widget.isArtistSort != oldWidget.isArtistSort) {
+    if (widget.songs != oldWidget.songs ||
+        widget.isArtistSort != oldWidget.isArtistSort) {
       _computeLetterMap();
     }
   }
@@ -54,7 +83,9 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
     final Map<String, int> map = {};
     for (int i = 0; i < widget.songs.length; i++) {
       final song = widget.songs[i];
-      final keyText = widget.isArtistSort ? song.artist.trim() : song.title.trim();
+      final keyText = widget.isArtistSort
+          ? song.artist.trim()
+          : song.title.trim();
       if (keyText.isEmpty) continue;
 
       final firstChar = keyText[0].toUpperCase();
@@ -112,7 +143,10 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
 
     if (targetIndex != null) {
       final maxScroll = widget.scrollController.position.maxScrollExtent;
-      final targetOffset = (targetIndex * widget.itemExtent).clamp(0.0, maxScroll);
+      final targetOffset = (targetIndex * widget.itemExtent).clamp(
+        0.0,
+        maxScroll,
+      );
       widget.scrollController.jumpTo(targetOffset);
     }
   }
@@ -131,41 +165,56 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
         widget.child,
 
         // Vertical Alphabet Bar along the right edge
-        if (widget.songs.length > 15)
-          Positioned(
-            right: 2,
+        if (widget.enabled && widget.songs.length > 15)
+          PositionedDirectional(
+            end: 2,
             top: 8,
             bottom: 8,
             child: Center(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onVerticalDragDown: (details) {
-                  final renderBox = _stripKey.currentContext?.findRenderObject() as RenderBox?;
+                  final renderBox =
+                      _stripKey.currentContext?.findRenderObject()
+                          as RenderBox?;
                   if (renderBox != null) {
-                    final local = renderBox.globalToLocal(details.globalPosition);
+                    final local = renderBox.globalToLocal(
+                      details.globalPosition,
+                    );
                     _onPan(local, renderBox.size.height);
                   }
                 },
                 onVerticalDragUpdate: (details) {
-                  final renderBox = _stripKey.currentContext?.findRenderObject() as RenderBox?;
+                  final renderBox =
+                      _stripKey.currentContext?.findRenderObject()
+                          as RenderBox?;
                   if (renderBox != null) {
-                    final local = renderBox.globalToLocal(details.globalPosition);
+                    final local = renderBox.globalToLocal(
+                      details.globalPosition,
+                    );
                     _onPan(local, renderBox.size.height);
                   }
                 },
                 onVerticalDragEnd: (_) => _onPanEnd(),
                 onVerticalDragCancel: () => _onPanEnd(),
                 onTapDown: (details) {
-                  final renderBox = _stripKey.currentContext?.findRenderObject() as RenderBox?;
+                  final renderBox =
+                      _stripKey.currentContext?.findRenderObject()
+                          as RenderBox?;
                   if (renderBox != null) {
-                    final local = renderBox.globalToLocal(details.globalPosition);
+                    final local = renderBox.globalToLocal(
+                      details.globalPosition,
+                    );
                     _onPan(local, renderBox.size.height);
                   }
                 },
                 onTapUp: (_) => _onPanEnd(),
                 child: Container(
                   key: _stripKey,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _activeLetter != null
                         ? AppColors.surfaceElevated.withValues(alpha: 0.85)
@@ -185,12 +234,18 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
                           letter,
                           style: TextStyle(
                             fontSize: isSelected ? 13 : 9.5,
-                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                            fontWeight: isSelected
+                                ? FontWeight.w900
+                                : FontWeight.w600,
                             color: isSelected
                                 ? AppColors.gold
                                 : (hasSongs
-                                    ? AppColors.textSecondary.withValues(alpha: 0.8)
-                                    : AppColors.textMuted.withValues(alpha: 0.3)),
+                                      ? AppColors.textSecondary.withValues(
+                                          alpha: 0.8,
+                                        )
+                                      : AppColors.textMuted.withValues(
+                                          alpha: 0.3,
+                                        )),
                           ),
                         ),
                       );
@@ -203,9 +258,12 @@ class _AlphabetFastScrollerState extends State<AlphabetFastScroller> {
 
         // Floating Alphabet Bubble / Indicator near user's touch
         if (_activeLetter != null)
-          Positioned(
-            right: 48,
-            top: (_indicatorY - 32).clamp(10.0, MediaQuery.of(context).size.height - 120),
+          PositionedDirectional(
+            end: 48,
+            top: (_indicatorY - 32).clamp(
+              10.0,
+              MediaQuery.of(context).size.height - 120,
+            ),
             child: Container(
               width: 58,
               height: 58,

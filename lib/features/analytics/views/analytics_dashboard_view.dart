@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/analytics_summary_model.dart';
@@ -21,14 +23,15 @@ class AnalyticsDashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(AnalyticsController());
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          'Listening Analytics',
+        title: Text(
+          strings.text('listeningAnalytics'),
           style: AppTypography.headlineMedium,
         ),
         actions: [
@@ -47,8 +50,8 @@ class AnalyticsDashboardView extends StatelessWidget {
               color: AppColors.gold,
               size: 16,
             ),
-            label: const Text(
-              'Replay',
+            label: Text(
+              strings.text('replay'),
               style: TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.w800,
@@ -71,6 +74,7 @@ class AnalyticsDashboardView extends StatelessWidget {
               Icons.settings_outlined,
               color: AppColors.textMuted,
             ),
+            tooltip: strings.text('settings'),
             onPressed: () => Get.to(() => const AnalyticsSettingsView()),
           ),
           const SizedBox(width: 8),
@@ -85,9 +89,9 @@ class AnalyticsDashboardView extends StatelessWidget {
 
         final summary = controller.summary.value;
         if (summary == null) {
-          return const Center(
+          return Center(
             child: Text(
-              'No listening data available.',
+              strings.text('noListeningData'),
               style: TextStyle(color: AppColors.textMuted),
             ),
           );
@@ -109,12 +113,12 @@ class AnalyticsDashboardView extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 2. High-Impact KPI Overview Cards
-              _buildPrimaryKpiBanner(summary),
+              _buildPrimaryKpiBanner(context, summary),
 
               const SizedBox(height: 16),
 
               // 3. Tab Navigation (Overview, Top Music, Trends, Discovery)
-              _buildSectionTabs(controller),
+              _buildSectionTabs(context, controller),
 
               const SizedBox(height: 16),
 
@@ -139,6 +143,7 @@ class AnalyticsDashboardView extends StatelessWidget {
     BuildContext context,
     AnalyticsController controller,
   ) {
+    final strings = SoniqLocalizations.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
@@ -155,7 +160,7 @@ class AnalyticsDashboardView extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(f.label),
+                  label: Text(_timeFilterLabel(strings, f)),
                   selected: isSelected,
                   selectedColor: AppColors.gold,
                   backgroundColor: const Color(0xFF1E1A2B),
@@ -204,7 +209,11 @@ class AnalyticsDashboardView extends StatelessWidget {
   }
 
   // --- 2. PRIMARY KPI BANNER ---
-  Widget _buildPrimaryKpiBanner(AnalyticsSummaryModel summary) {
+  Widget _buildPrimaryKpiBanner(
+    BuildContext context,
+    AnalyticsSummaryModel summary,
+  ) {
+    final strings = SoniqLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -232,8 +241,8 @@ class AnalyticsDashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'TOTAL LISTENING TIME',
+              Text(
+                strings.text('totalListeningTime').toUpperCase(),
                 style: TextStyle(
                   color: AppColors.gold,
                   fontSize: 11,
@@ -264,7 +273,7 @@ class AnalyticsDashboardView extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${summary.currentStreakDays}d Streak',
+                        '${summary.currentStreakDays} ${strings.text('streak')}',
                         style: const TextStyle(
                           color: Color(0xFFFF5722),
                           fontWeight: FontWeight.w800,
@@ -294,16 +303,20 @@ class AnalyticsDashboardView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMiniStat('${summary.totalEvents}', 'Play Count'),
               _buildMiniStat(
-                '${(summary.completionRate * 100).round()}%',
-                'Completion Rate',
+                NumberFormat.decimalPattern(strings.locale.toString())
+                    .format(summary.totalEvents),
+                strings.text('playCount'),
               ),
               _buildMiniStat(
-                '${(summary.skipRate * 100).round()}%',
-                'Skip Rate',
+                '${NumberFormat.decimalPattern(strings.locale.toString()).format((summary.completionRate * 100).round())}%',
+                strings.text('completionRate'),
               ),
-              _buildMiniStat(summary.peakHourLabel, 'Peak Hour'),
+              _buildMiniStat(
+                '${NumberFormat.decimalPattern(strings.locale.toString()).format((summary.skipRate * 100).round())}%',
+                strings.text('skipRate'),
+              ),
+              _buildMiniStat(summary.peakHourLabel, strings.text('peakHour')),
             ],
           ),
         ],
@@ -331,9 +344,33 @@ class AnalyticsDashboardView extends StatelessWidget {
     );
   }
 
+  String _timeFilterLabel(
+    SoniqLocalizations strings,
+    AnalyticsTimeFilter filter,
+  ) => switch (filter) {
+    AnalyticsTimeFilter.today => strings.text('filterDaily'),
+    AnalyticsTimeFilter.last7Days => strings.text('filterWeekly'),
+    AnalyticsTimeFilter.last30Days => strings.text('filter30Days'),
+    AnalyticsTimeFilter.thisMonth => strings.text('filterMonthly'),
+    AnalyticsTimeFilter.lastMonth => strings.text('filterLastMonth'),
+    AnalyticsTimeFilter.last90Days => strings.text('filter90Days'),
+    AnalyticsTimeFilter.thisYear => strings.text('filterYearly'),
+    AnalyticsTimeFilter.allTime => strings.text('filterAllTime'),
+    AnalyticsTimeFilter.custom => strings.text('filterCustom'),
+  };
+
   // --- 3. SECTION TABS ---
-  Widget _buildSectionTabs(AnalyticsController controller) {
-    const tabs = ['Overview', 'Top Music', 'Trends & Habits', 'Discovery'];
+  Widget _buildSectionTabs(
+    BuildContext context,
+    AnalyticsController controller,
+  ) {
+    final strings = SoniqLocalizations.of(context);
+    final tabs = [
+      strings.text('overview'),
+      strings.text('topMusic'),
+      strings.text('trendsHabits'),
+      strings.text('discovery'),
+    ];
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -383,6 +420,7 @@ class AnalyticsDashboardView extends StatelessWidget {
     AnalyticsController controller,
     AnalyticsSummaryModel summary,
   ) {
+    final strings = SoniqLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -404,9 +442,11 @@ class AnalyticsDashboardView extends StatelessWidget {
               child: MetricStatCard(
                 icon: Icons.music_note_rounded,
                 iconColor: AppColors.gold,
-                title: 'Unique Tracks',
-                value: '${summary.uniqueTracksPlayed}',
-                subtitle: '${summary.totalEvents} total sessions',
+                title: strings.text('uniqueTracks'),
+                value: NumberFormat.decimalPattern(strings.locale.toString())
+                    .format(summary.uniqueTracksPlayed),
+                subtitle:
+                    '${NumberFormat.decimalPattern(strings.locale.toString()).format(summary.totalEvents)} ${strings.text('totalSessions')}',
               ),
             ),
             const SizedBox(width: 10),
@@ -414,9 +454,11 @@ class AnalyticsDashboardView extends StatelessWidget {
               child: MetricStatCard(
                 icon: Icons.person_rounded,
                 iconColor: AppColors.primary,
-                title: 'Artists Played',
-                value: '${summary.uniqueArtistsPlayed}',
-                subtitle: '${summary.uniqueAlbumsPlayed} albums',
+                title: strings.text('artistsPlayed'),
+                value: NumberFormat.decimalPattern(strings.locale.toString())
+                    .format(summary.uniqueArtistsPlayed),
+                subtitle:
+                    '${NumberFormat.decimalPattern(strings.locale.toString()).format(summary.uniqueAlbumsPlayed)} ${strings.text('albums')}',
               ),
             ),
           ],
@@ -428,9 +470,9 @@ class AnalyticsDashboardView extends StatelessWidget {
               child: MetricStatCard(
                 icon: Icons.today_rounded,
                 iconColor: const Color(0xFF00E676),
-                title: 'Daily Average',
+                title: strings.text('dailyAverage'),
                 value: summary.formattedAverageDailyTime,
-                subtitle: 'per active listening day',
+                subtitle: strings.text('perActiveListeningDay'),
               ),
             ),
             const SizedBox(width: 10),
@@ -438,9 +480,10 @@ class AnalyticsDashboardView extends StatelessWidget {
               child: MetricStatCard(
                 icon: Icons.timer_outlined,
                 iconColor: const Color(0xFF00E5FF),
-                title: 'Avg Session',
-                value: '${summary.averageSessionDurationMs ~/ 60000} mins',
-                subtitle: 'continuous listening',
+                title: strings.text('averageSession'),
+                value:
+                    '${NumberFormat.decimalPattern(strings.locale.toString()).format(summary.averageSessionDurationMs ~/ 60000)} ${strings.text('mins')}',
+                subtitle: strings.text('continuousListening'),
               ),
             ),
           ],

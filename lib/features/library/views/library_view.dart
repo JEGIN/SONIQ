@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/widgets/track_tile.dart';
 import '../../../core/widgets/soniq_pill_tab.dart';
@@ -37,6 +39,8 @@ class _LibraryViewState extends State<LibraryView> {
   Widget build(BuildContext context) {
     final libraryController = Get.find<LibraryController>();
     final playerController = Get.find<AudioPlayerController>();
+    final strings = SoniqLocalizations.of(context);
+    final useFlexibleRows = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,20 +49,25 @@ class _LibraryViewState extends State<LibraryView> {
           children: [
             // 1. Header (Title "Local" + Search & Sort Icons) (Matches Reference Image 2)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 12, 4),
               child: Row(
                 children: [
-                  const Text(
-                    'Local',
+                  Text(
+                    strings.text('local'),
                     style: AppTypography.displayLarge,
                   ),
                   const Spacer(),
                   IconButton(
                     icon: Icon(
-                      _isSearchExpanded ? Icons.close_rounded : Icons.search_rounded,
+                      _isSearchExpanded
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
                       color: AppColors.textPrimary,
                       size: 24,
                     ),
+                    tooltip: _isSearchExpanded
+                        ? MaterialLocalizations.of(context).closeButtonTooltip
+                        : strings.text('searchHint'),
                     onPressed: () {
                       setState(() {
                         _isSearchExpanded = !_isSearchExpanded;
@@ -70,13 +79,22 @@ class _LibraryViewState extends State<LibraryView> {
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.sort_rounded, color: AppColors.textPrimary, size: 24),
-                    tooltip: 'Sort Songs',
-                    onPressed: () => LibrarySortBottomSheet.show(context, libraryController),
+                    icon: const Icon(
+                      Icons.sort_rounded,
+                      color: AppColors.textPrimary,
+                      size: 24,
+                    ),
+                    tooltip: strings.text('sortSongs'),
+                    onPressed: () =>
+                        LibrarySortBottomSheet.show(context, libraryController),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.sync_rounded, color: AppColors.textPrimary, size: 24),
-                    tooltip: 'Rescan Library',
+                    icon: const Icon(
+                      Icons.sync_rounded,
+                      color: AppColors.textPrimary,
+                      size: 24,
+                    ),
+                    tooltip: strings.text('rescanLibrary'),
                     onPressed: () => libraryController.scanLibrary(),
                   ),
                 ],
@@ -86,19 +104,33 @@ class _LibraryViewState extends State<LibraryView> {
             // Search Bar Input (Expanded)
             if (_isSearchExpanded)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 child: TextField(
                   controller: _searchController,
                   autofocus: true,
+                  textAlign: Directionality.of(context) == TextDirection.rtl
+                      ? TextAlign.right
+                      : TextAlign.left,
+                  textDirection: Directionality.of(context),
                   onChanged: (val) => libraryController.updateSearch(val),
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Search songs, artists, albums...',
+                    hintText: strings.text('searchHint'),
                     hintStyle: const TextStyle(color: AppColors.textMuted),
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
                     filled: true,
                     fillColor: AppColors.surfaceElevated,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(color: AppColors.border),
@@ -120,23 +152,25 @@ class _LibraryViewState extends State<LibraryView> {
             // 2. Pill Tabs: Songs, Artists, Albums, Folders (Matches Reference Image 2)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Obx(() => SoniqPillTab<LibraryFilterTab>(
-                    items: LibraryFilterTab.values,
-                    selectedItem: libraryController.activeTab.value,
-                    onSelect: (tab) => libraryController.setFilterTab(tab),
-                    labelBuilder: (tab) {
-                      switch (tab) {
-                        case LibraryFilterTab.songs:
-                          return 'Songs (${libraryController.allSongs.length})';
-                        case LibraryFilterTab.artists:
-                          return 'Artists';
-                        case LibraryFilterTab.albums:
-                          return 'Albums';
-                        case LibraryFilterTab.folders:
-                          return 'Folders';
-                      }
-                    },
-                  )),
+              child: Obx(
+                () => SoniqPillTab<LibraryFilterTab>(
+                  items: LibraryFilterTab.values,
+                  selectedItem: libraryController.activeTab.value,
+                  onSelect: (tab) => libraryController.setFilterTab(tab),
+                  labelBuilder: (tab) {
+                    switch (tab) {
+                      case LibraryFilterTab.songs:
+                        return '${strings.text('songs')} (${libraryController.allSongs.length})';
+                      case LibraryFilterTab.artists:
+                        return strings.text('artists');
+                      case LibraryFilterTab.albums:
+                        return strings.text('albums');
+                      case LibraryFilterTab.folders:
+                        return strings.text('folders');
+                    }
+                  },
+                ),
+              ),
             ),
 
             const SizedBox(height: 12),
@@ -145,18 +179,27 @@ class _LibraryViewState extends State<LibraryView> {
             Obx(() {
               if (libraryController.isScanning.value) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
                   child: Row(
                     children: [
                       const SizedBox(
                         width: 14,
                         height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Scanning audio tracks (${libraryController.scanCurrent}/${libraryController.scanTotal})...',
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        '${strings.text('scanningTracks')} (${libraryController.scanCurrent}/${libraryController.scanTotal})',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -175,9 +218,9 @@ class _LibraryViewState extends State<LibraryView> {
 
                     if (songs.isEmpty && !libraryController.isScanning.value) {
                       return SoniqEmptyState(
-                        title: 'No Music Found',
-                        description: 'No audio files found on your device storage. Tap below to scan your music library.',
-                        buttonText: 'Scan Storage',
+                        title: strings.text('noMusicFound'),
+                        description: strings.text('noAudioFiles'),
+                        buttonText: strings.text('scanStorage'),
                         onButtonPressed: () => libraryController.scanLibrary(),
                       );
                     }
@@ -188,8 +231,12 @@ class _LibraryViewState extends State<LibraryView> {
                           scrollController: _scrollController,
                           songs: songs,
                           itemExtent: 68.0,
-                          isArtistSort: libraryController.sortOption.value == SongSortOption.artistAsc ||
-                              libraryController.sortOption.value == SongSortOption.artistDesc,
+                          enabled: !useFlexibleRows,
+                          isArtistSort:
+                              libraryController.sortOption.value ==
+                                  SongSortOption.artistAsc ||
+                              libraryController.sortOption.value ==
+                                  SongSortOption.artistDesc,
                           child: RefreshIndicator(
                             color: AppColors.primary,
                             backgroundColor: AppColors.surfaceElevated,
@@ -197,14 +244,21 @@ class _LibraryViewState extends State<LibraryView> {
                             child: ListView.builder(
                               controller: _scrollController,
                               itemCount: songs.length,
-                              itemExtent: 68.0,
+                              itemExtent: useFlexibleRows ? null : 68.0,
                               padding: EdgeInsets.only(
-                                bottom: playerController.currentSong.value != null ? 165.0 : 100.0,
+                                bottom:
+                                    playerController.currentSong.value != null
+                                    ? 165.0
+                                    : 100.0,
                               ),
-                              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
                               itemBuilder: (context, index) {
                                 final song = songs[index];
-                                final isCurrent = playerController.currentSong.value?.id == song.id;
+                                final isCurrent =
+                                    playerController.currentSong.value?.id ==
+                                    song.id;
 
                                 return TrackTile(
                                   song: song,
@@ -215,7 +269,8 @@ class _LibraryViewState extends State<LibraryView> {
                                   onFavoriteTap: () {
                                     libraryController.toggleFavorite(song);
                                   },
-                                  onMoreTap: () => _openTrackOptions(context, song),
+                                  onMoreTap: () =>
+                                      _openTrackOptions(context, song),
                                 );
                               },
                             ),
@@ -223,22 +278,34 @@ class _LibraryViewState extends State<LibraryView> {
                         );
 
                       case LibraryFilterTab.artists:
-                        return _buildArtistsView(libraryController, playerController);
+                        return _buildArtistsView(
+                          libraryController,
+                          playerController,
+                        );
 
                       case LibraryFilterTab.albums:
-                        return _buildAlbumsView(libraryController, playerController);
+                        return _buildAlbumsView(
+                          libraryController,
+                          playerController,
+                        );
 
                       case LibraryFilterTab.folders:
-                        return FolderBrowseView(foldersMap: libraryController.foldersMap);
+                        return FolderBrowseView(
+                          foldersMap: libraryController.foldersMap,
+                        );
                     }
                   }),
 
                   // Floating Play All & Shuffle All action bar (visible on Songs tab)
-                  Obx(() => SoniqFloatingPlaybackBar(
-                        songs: libraryController.filteredSongs,
-                        collectionTitle: 'All Songs',
-                        isVisible: libraryController.activeTab.value == LibraryFilterTab.songs,
-                      )),
+                  Obx(
+                    () => SoniqFloatingPlaybackBar(
+                      songs: libraryController.filteredSongs,
+                      collectionTitle: 'All Songs',
+                      isVisible:
+                          libraryController.activeTab.value ==
+                          LibraryFilterTab.songs,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -248,7 +315,10 @@ class _LibraryViewState extends State<LibraryView> {
     );
   }
 
-  Widget _buildArtistsView(LibraryController libraryCtrl, AudioPlayerController playerCtrl) {
+  Widget _buildArtistsView(
+    LibraryController libraryCtrl,
+    AudioPlayerController playerCtrl,
+  ) {
     final artists = libraryCtrl.artistsMap.entries.toList();
     if (artists.isEmpty) {
       return const Center(child: Text('No artists found'));
@@ -272,12 +342,26 @@ class _LibraryViewState extends State<LibraryView> {
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.border, width: 1),
             ),
-            child: const Icon(Icons.person_rounded, color: AppColors.secondary, size: 24),
+            child: const Icon(
+              Icons.person_rounded,
+              color: AppColors.secondary,
+              size: 24,
+            ),
           ),
-          title: Text(artistName, style: AppTypography.headlineSmall.copyWith(fontSize: 15)),
-          subtitle: Text('${songs.length} songs', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          title: Text(
+            artistName,
+            style: AppTypography.headlineSmall.copyWith(fontSize: 15),
+          ),
+          subtitle: Text(
+            '${songs.length} songs',
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
           trailing: IconButton(
-            icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 28),
+            icon: const Icon(
+              Icons.play_circle_fill_rounded,
+              color: AppColors.primary,
+              size: 28,
+            ),
             onPressed: () => playerCtrl.playSong(songs.first, songs),
           ),
           onTap: () => _openGroupList(context, artistName, songs, playerCtrl),
@@ -286,7 +370,10 @@ class _LibraryViewState extends State<LibraryView> {
     );
   }
 
-  Widget _buildAlbumsView(LibraryController libraryCtrl, AudioPlayerController playerCtrl) {
+  Widget _buildAlbumsView(
+    LibraryController libraryCtrl,
+    AudioPlayerController playerCtrl,
+  ) {
     final albums = libraryCtrl.albumsMap.entries.toList();
     if (albums.isEmpty) {
       return const Center(child: Text('No albums found'));
@@ -324,10 +411,16 @@ class _LibraryViewState extends State<LibraryView> {
                       gradient: LinearGradient(
                         colors: [Color(0xFF231E34), Color(0xFF141320)],
                       ),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.album_rounded, size: 48, color: AppColors.secondary),
+                      child: Icon(
+                        Icons.album_rounded,
+                        size: 48,
+                        color: AppColors.secondary,
+                      ),
                     ),
                   ),
                 ),
@@ -340,12 +433,18 @@ class _LibraryViewState extends State<LibraryView> {
                         albumName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${songs.length} tracks',
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
@@ -382,10 +481,19 @@ class _LibraryViewState extends State<LibraryView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(title, style: AppTypography.headlineMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      title,
+                      style: AppTypography.headlineMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 32),
+                    icon: const Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
                     onPressed: () {
                       playerCtrl.playSong(songs.first, songs);
                       Navigator.pop(context);

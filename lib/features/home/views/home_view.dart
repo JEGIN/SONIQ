@@ -5,6 +5,7 @@ import 'package:on_audio_query/on_audio_query.dart' hide SongModel;
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/database/song_cache_service.dart';
 import '../../../core/widgets/soniq_card.dart';
@@ -28,6 +29,7 @@ class HomeView extends StatelessWidget {
     final libraryController = Get.find<LibraryController>();
     final playerController = Get.find<AudioPlayerController>();
     final navController = Get.find<NavigationController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -38,9 +40,9 @@ class HomeView extends StatelessWidget {
           if (allSongs.isEmpty && !libraryController.isScanning.value) {
             return SoniqEmptyState(
               icon: Icons.graphic_eq_rounded,
-              title: 'Welcome to SONIQ',
-              description: 'SONIQ is ready to scan your offline music library and unlock the MP3 Ringtone Studio.',
-              buttonText: 'Scan Audio Library',
+              title: strings.text('welcomeHome'),
+              description: strings.text('homeIntro'),
+              buttonText: strings.text('scanAudioLibrary'),
               onButtonPressed: () => libraryController.scanLibrary(),
             );
           }
@@ -89,7 +91,7 @@ class HomeView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _getGreeting(),
+                              _getGreeting(strings),
                               style: AppTypography.bodySmall.copyWith(
                                 color: AppColors.textMuted,
                                 letterSpacing: 0.5,
@@ -109,7 +111,7 @@ class HomeView extends StatelessWidget {
                           Icons.sync_rounded,
                           color: AppColors.textSecondary,
                         ),
-                        tooltip: 'Scan Library',
+                        tooltip: strings.text('scanLibrary'),
                         onPressed: () => libraryController.scanLibrary(),
                       ),
 
@@ -119,7 +121,7 @@ class HomeView extends StatelessWidget {
                           Icons.directions_car_rounded,
                           color: AppColors.gold,
                         ),
-                        tooltip: 'Renault Triber Car Mode',
+                        tooltip: strings.text('carMode'),
                         onPressed: () => Get.to(
                           () => const CarModeView(),
                           transition: Transition.fadeIn,
@@ -133,7 +135,7 @@ class HomeView extends StatelessWidget {
                           Icons.insights_rounded,
                           color: AppColors.primary,
                         ),
-                        tooltip: 'Listening Analytics',
+                        tooltip: strings.text('listeningAnalytics'),
                         onPressed: () => Get.to(
                           () => const AnalyticsDashboardView(),
                           transition: Transition.rightToLeft,
@@ -146,7 +148,7 @@ class HomeView extends StatelessWidget {
                           Icons.auto_awesome_rounded,
                           color: AppColors.gold,
                         ),
-                        tooltip: 'Music Discovery & Mixes',
+                        tooltip: strings.text('musicDiscovery'),
                         onPressed: () => Get.to(
                           () => const DiscoveryView(),
                           transition: Transition.rightToLeft,
@@ -159,7 +161,7 @@ class HomeView extends StatelessWidget {
                           Icons.settings_outlined,
                           color: AppColors.textSecondary,
                         ),
-                        tooltip: 'Settings',
+                        tooltip: strings.text('settings'),
                         onPressed: () => Get.to(() => const SettingsView()),
                       ),
                     ],
@@ -220,7 +222,12 @@ class HomeView extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  filter,
+                                  switch (filter) {
+                                    'Song mix' => strings.text('songs'),
+                                    'Album mix' => strings.text('albums'),
+                                    'Decade mix' => strings.text('decades'),
+                                    _ => filter,
+                                  },
                                   style: TextStyle(
                                     color: isSelected
                                         ? AppColors.primary
@@ -275,17 +282,17 @@ class HomeView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Audio Studio & Ringtone Maker',
+                                strings.text('audioStudioRingtoneMaker'),
                                 style: AppTypography.headlineSmall,
                               ),
                               SizedBox(height: 3),
                               Text(
-                                'Lossless waveform trimming & direct ringtone export',
+                                strings.text('losslessTrimExport'),
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
@@ -342,12 +349,12 @@ class HomeView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Listening Analytics & Replay',
+                                strings.text('analyticsReplay'),
                                 style: AppTypography.headlineSmall,
                               ),
                               SizedBox(height: 3),
@@ -395,7 +402,8 @@ class HomeView extends StatelessWidget {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00ACC1).withValues(alpha: 0.15),
+                            color: const Color(0xFF00ACC1)
+                                .withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: const Color(0xFF00ACC1),
@@ -469,12 +477,12 @@ class HomeView extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'YOUR MIX',
+                                  strings.text('yourMix').toUpperCase(),
                                   style: TextStyle(
                                     color: AppColors.cyan,
                                     fontSize: 10,
@@ -484,12 +492,12 @@ class HomeView extends StatelessWidget {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  "Today's Mix",
+                                  strings.text('todaysMix'),
                                   style: AppTypography.headlineSmall,
                                 ),
                                 SizedBox(height: 3),
                                 Text(
-                                  'Picked from your listening habits',
+                                  strings.text('pickedListeningHabits'),
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 11,
@@ -499,7 +507,7 @@ class HomeView extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            tooltip: "Play today's mix",
+                            tooltip: strings.text('todaysMix'),
                             onPressed: () {
                               if (SongCacheService().getSetting(
                                     'haptic_feedback_enabled',
@@ -546,13 +554,13 @@ class HomeView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Favourite Tracks',
+                              strings.text('favoriteTracks'),
                               style: AppTypography.headlineMedium,
                             ),
                             Icon(
@@ -589,10 +597,10 @@ class HomeView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
                         child: Text(
-                          'Recently Played',
+                          strings.text('recentlyPlayed'),
                           style: AppTypography.headlineMedium,
                         ),
                       ),
@@ -618,14 +626,14 @@ class HomeView extends StatelessWidget {
                 ),
 
               // 6. Recently Added Music List
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Recently Added',
+                        strings.text('recentlyAdded'),
                         style: AppTypography.headlineMedium,
                       ),
                     ],
@@ -749,10 +757,10 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  String _getGreeting() {
+  String _getGreeting(SoniqLocalizations strings) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return strings.text('goodMorning');
+    if (hour < 17) return strings.text('goodAfternoon');
+    return strings.text('goodEvening');
   }
 }

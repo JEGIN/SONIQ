@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/database/song_cache_service.dart';
 import '../../../core/services/audio_dsp_service.dart';
 import '../../../core/utils/file_utils.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../library/controllers/library_controller.dart';
 
 class SettingsController extends GetxController {
@@ -26,12 +28,23 @@ class SettingsController extends GetxController {
   final RxBool highRefreshRateEnabled = false.obs;
   final RxBool hapticFeedbackEnabled = true.obs;
   final RxBool playerGesturesEnabled = true.obs;
+  final RxString languageCode = 'system'.obs;
   final RxList<String> excludedDirectories = <String>[].obs;
   final AudioDspService dspService = AudioDspService();
 
   @override
   void onInit() {
     super.onInit();
+    final savedLanguage = cacheService.getSetting(
+      'language_code',
+      defaultValue: 'system',
+    ) as String;
+    final hasSavedLanguage =
+        savedLanguage == 'system' ||
+        SoniqLocalizations.supportedLocales.any(
+          (locale) => locale.languageCode == savedLanguage,
+        );
+    languageCode.value = hasSavedLanguage ? savedLanguage : 'system';
     skipRecordings.value = cacheService.isSkipRecordingsEnabled();
     autoPlayOnCastChange.value = cacheService.getSetting(
       'auto_play_on_cast_change',
@@ -61,6 +74,17 @@ class SettingsController extends GetxController {
     dspService.setVisualizerEnabled(!batteryOptimizationEnabled.value);
     dspService.setHighRefreshRate(highRefreshRateEnabled.value);
     updateCacheSize();
+  }
+
+  Future<void> setLanguage(String code) async {
+    languageCode.value = code;
+    await cacheService.setSetting('language_code', code);
+    final locale = SoniqLocalizations.resolve(
+      SoniqLocalizations.localeForCode(code) ??
+          WidgetsBinding.instance.platformDispatcher.locale,
+    );
+    Intl.defaultLocale = locale.toString();
+    Get.updateLocale(locale);
   }
 
   Future<void> setAutoPlayOnCastChange(bool enabled) async {

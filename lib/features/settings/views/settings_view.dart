@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../core/widgets/soniq_card.dart';
 import '../controllers/settings_controller.dart';
 import 'about_dialog_view.dart';
@@ -16,6 +18,7 @@ class SettingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settingsController = Get.find<SettingsController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -24,9 +27,58 @@ class SettingsView extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(4, 8, 4, 16),
-              child: Text('Settings', style: AppTypography.displayLarge),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 16),
+              child: Text(
+                strings.text('settings'),
+                style: AppTypography.displayLarge,
+              ),
+            ),
+
+            _buildSectionHeader(strings.text('languageRegion')),
+            SoniqCard(
+              padding: EdgeInsets.zero,
+              child: Obx(
+                () => ListTile(
+                  leading: const Icon(
+                    Icons.language_rounded,
+                    color: AppColors.cyan,
+                  ),
+                  title: Text(strings.text('language')),
+                  subtitle: Text(
+                    strings.text('languageHelp'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 112),
+                        child: Text(
+                          settingsController.languageCode.value == 'system'
+                              ? strings.text('systemLanguage')
+                              : SoniqLocalizations.languageName(
+                                  settingsController.languageCode.value,
+                                ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
+                  ),
+                  onTap: () => _showLanguagePicker(context, settingsController),
+                ),
+              ),
             ),
 
             // Library & Audio Stats Card
@@ -35,29 +87,60 @@ class SettingsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Library Overview',
+                    Text(
+                      strings.text('libraryOverview'),
                       style: AppTypography.headlineSmall,
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatItem(
-                          'Tracks',
-                          '${settingsController.totalIndexedSongs}',
-                        ),
-                        _buildStatDivider(),
-                        _buildStatItem(
-                          'Storage',
-                          settingsController.totalLibrarySizeFormatted,
-                        ),
-                        _buildStatDivider(),
-                        _buildStatItem(
-                          'Ringtones',
-                          '${settingsController.totalRingtonesCount}',
-                        ),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact =
+                            constraints.maxWidth < 360 ||
+                            MediaQuery.textScalerOf(context).scale(14) > 18;
+                        final stats = [
+                          _buildStatItem(
+                            strings.text('trackCountLabel'),
+                            NumberFormat.decimalPattern().format(
+                              settingsController.totalIndexedSongs,
+                            ),
+                          ),
+                          _buildStatItem(
+                            strings.text('storage'),
+                            settingsController.totalLibrarySizeFormatted,
+                          ),
+                          _buildStatItem(
+                            strings.text('ringtones'),
+                            NumberFormat.decimalPattern().format(
+                              settingsController.totalRingtonesCount,
+                            ),
+                          ),
+                        ];
+                        if (compact) {
+                          return Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: stats
+                                .map(
+                                  (stat) => SizedBox(
+                                    width: (constraints.maxWidth - 28) / 2,
+                                    child: stat,
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        }
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            stats[0],
+                            _buildStatDivider(),
+                            stats[1],
+                            _buildStatDivider(),
+                            stats[2],
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -66,7 +149,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Library & Audio Indexing'),
+            _buildSectionHeader(strings.text('libraryAudioIndexing')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -77,9 +160,9 @@ class SettingsView extends StatelessWidget {
                       Icons.sync_rounded,
                       color: AppColors.primary,
                     ),
-                    title: const Text('Rescan Music Library'),
-                    subtitle: const Text(
-                      'Scan local device storage for newly added tracks',
+                    title: Text(strings.text('rescanMusicLibrary')),
+                    subtitle: Text(
+                      strings.text('rescanMusicLibraryHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -87,10 +170,7 @@ class SettingsView extends StatelessWidget {
                     ),
                     onTap: () {
                       settingsController.libraryController.scanLibrary();
-                      Get.snackbar(
-                        'Scanning',
-                        'Rescanning audio files from storage...',
-                      );
+                      Get.snackbar('Scanning', strings.text('scanningTracks'));
                     },
                   ),
                   const Divider(color: AppColors.border, height: 1),
@@ -99,10 +179,10 @@ class SettingsView extends StatelessWidget {
                       Icons.cleaning_services_rounded,
                       color: AppColors.cyan,
                     ),
-                    title: const Text('Clear Artwork Cache'),
+                    title: Text(strings.text('clearArtworkCache')),
                     subtitle: Obx(
                       () => Text(
-                        'Cached artwork: ${settingsController.cacheSizeText.value}',
+                        '${strings.text('cachedArtwork')}: ${settingsController.cacheSizeText.value}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -129,7 +209,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Playback & Audio Engine'),
+            _buildSectionHeader(strings.text('playbackAudioEngine')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -141,9 +221,9 @@ class SettingsView extends StatelessWidget {
                       Icons.headset_rounded,
                       color: AppColors.primary,
                     ),
-                    title: const Text('Pause on Disconnect'),
-                    subtitle: const Text(
-                      'Auto pause playback when headphones are unplugged',
+                    title: Text(strings.text('pauseOnDisconnect')),
+                    subtitle: Text(
+                      strings.text('pauseOnDisconnectHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -159,9 +239,9 @@ class SettingsView extends StatelessWidget {
                       Icons.high_quality_rounded,
                       color: AppColors.gold,
                     ),
-                    title: const Text('Lossless Frame Slicing'),
-                    subtitle: const Text(
-                      'Preserves 100% original MPEG bitrate during ringtone trims',
+                    title: Text(strings.text('losslessFrameSlicing')),
+                    subtitle: Text(
+                      strings.text('losslessFrameSlicingHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -179,9 +259,9 @@ class SettingsView extends StatelessWidget {
                         Icons.mic_off_rounded,
                         color: AppColors.gold,
                       ),
-                      title: const Text('Filter Voice & Call Recordings'),
-                      subtitle: const Text(
-                        'Skip Sound Recorder, WhatsApp voice notes, and call recordings so they never interrupt music playback',
+                      title: Text(strings.text('filterVoiceCallRecordings')),
+                      subtitle: Text(
+                        strings.text('filterRecordingsHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -198,7 +278,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Device & Playback'),
+            _buildSectionHeader(strings.text('deviceAndPlayback')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -211,9 +291,9 @@ class SettingsView extends StatelessWidget {
                         Icons.cast_connected_rounded,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Auto Play on Cast Connect/Disconnect'),
-                      subtitle: const Text(
-                        'Resume playback after the active audio output changes',
+                      title: Text(strings.text('autoPlayOnCast')),
+                      subtitle: Text(
+                        strings.text('autoPlayOnCastHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -231,9 +311,9 @@ class SettingsView extends StatelessWidget {
                         Icons.swap_horiz_rounded,
                         color: AppColors.gold,
                       ),
-                      title: const Text('Crossfade'),
-                      subtitle: const Text(
-                        'Fade between tracks for smoother transitions',
+                      title: Text(strings.text('crossfade')),
+                      subtitle: Text(
+                        strings.text('crossfadeHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -251,9 +331,9 @@ class SettingsView extends StatelessWidget {
                         Icons.battery_saver_rounded,
                         color: AppColors.cyan,
                       ),
-                      title: const Text('Battery Optimization'),
-                      subtitle: const Text(
-                        'Turn off the live spectrum visualizer to reduce background work',
+                      title: Text(strings.text('batteryOptimization')),
+                      subtitle: Text(
+                        strings.text('batteryOptimizationHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -273,9 +353,9 @@ class SettingsView extends StatelessWidget {
                         Icons.speed_rounded,
                         color: AppColors.gold,
                       ),
-                      title: const Text('High Refresh Rate'),
-                      subtitle: const Text(
-                        'Request the fastest display mode available',
+                      title: Text(strings.text('highRefreshRate')),
+                      subtitle: Text(
+                        strings.text('highRefreshRateHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -302,9 +382,9 @@ class SettingsView extends StatelessWidget {
                         Icons.vibration_rounded,
                         color: AppColors.primary,
                       ),
-                      title: const Text('Haptic Feedback'),
-                      subtitle: const Text(
-                        'Use subtle vibration for supported player actions',
+                      title: Text(strings.text('hapticFeedback')),
+                      subtitle: Text(
+                        strings.text('hapticFeedbackHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -322,9 +402,9 @@ class SettingsView extends StatelessWidget {
                         Icons.swipe_rounded,
                         color: AppColors.cyan,
                       ),
-                      title: const Text('Player Gestures'),
-                      subtitle: const Text(
-                        'Swipe left or right in Now Playing to change tracks',
+                      title: Text(strings.text('playerGestures')),
+                      subtitle: Text(
+                        strings.text('playerGesturesHelp'),
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -349,12 +429,23 @@ class SettingsView extends StatelessWidget {
                       Icons.folder_off_rounded,
                       color: AppColors.gold,
                     ),
-                    title: const Text('Exclude Directories'),
+                    title: Text(strings.text('excludeDirectories')),
                     subtitle: Obx(
                       () => Text(
                         settingsController.excludedDirectories.isEmpty
-                            ? 'Choose folders to skip during library scans'
-                            : '${settingsController.excludedDirectories.length} folder${settingsController.excludedDirectories.length == 1 ? '' : 's'} excluded',
+                            ? strings.text('chooseFoldersToSkip')
+                            : strings
+                                  .text('excludedFoldersCount')
+                                  .replaceAll(
+                                    '{count}',
+                                    NumberFormat.decimalPattern(
+                                      strings.locale.toString(),
+                                    ).format(
+                                      settingsController
+                                          .excludedDirectories
+                                          .length,
+                                    ),
+                                  ),
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,
@@ -376,9 +467,9 @@ class SettingsView extends StatelessWidget {
                       Icons.memory_rounded,
                       color: AppColors.cyan,
                     ),
-                    title: const Text('Device Capabilities'),
-                    subtitle: const Text(
-                      'Formats, local storage, outputs and device details',
+                    title: Text(strings.text('deviceCapabilities')),
+                    subtitle: Text(
+                      strings.text('deviceCapabilitiesHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -396,7 +487,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Listening Analytics & Insights'),
+            _buildSectionHeader(strings.text('listeningAnalyticsInsights')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -415,12 +506,12 @@ class SettingsView extends StatelessWidget {
                         size: 22,
                       ),
                     ),
-                    title: const Text(
-                      'Listening Analytics Dashboard',
+                    title: Text(
+                      strings.text('analyticsDashboard'),
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: const Text(
-                      'View personal music statistics, top songs, trends and streaks',
+                    subtitle: Text(
+                      strings.text('analyticsDashboardHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -446,12 +537,12 @@ class SettingsView extends StatelessWidget {
                         size: 22,
                       ),
                     ),
-                    title: const Text(
-                      'Analytics Privacy & History',
+                    title: Text(
+                      strings.text('analyticsPrivacyHistory'),
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: const Text(
-                      'Manage on-device tracking, export JSON data, or clear history',
+                    subtitle: Text(
+                      strings.text('analyticsPrivacyHelp'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -469,7 +560,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('Share & Distribute'),
+            _buildSectionHeader(strings.text('shareDistribute')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -486,12 +577,12 @@ class SettingsView extends StatelessWidget {
                     size: 22,
                   ),
                 ),
-                title: const Text(
-                  'Share App (as APK)',
+                title: Text(
+                  strings.text('shareAppApk'),
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
-                subtitle: const Text(
-                  'Export and send the SONIQ .apk file via Quick Share, Bluetooth, or messaging apps',
+                subtitle: Text(
+                  strings.text('shareAppApkHelp'),
                   style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 trailing: Obx(
@@ -516,7 +607,7 @@ class SettingsView extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            _buildSectionHeader('About'),
+            _buildSectionHeader(strings.text('about')),
 
             SoniqCard(
               padding: EdgeInsets.zero,
@@ -525,9 +616,9 @@ class SettingsView extends StatelessWidget {
                   Icons.info_outline_rounded,
                   color: AppColors.secondary,
                 ),
-                title: const Text('About SONIQ'),
-                subtitle: const Text(
-                  'Version 1.0.0 • Architecture & Credits',
+                title: Text(strings.text('aboutSoniq')),
+                subtitle: Text(
+                  strings.text('aboutVersionCredits'),
                   style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 trailing: const Icon(
@@ -565,11 +656,82 @@ class SettingsView extends StatelessWidget {
     );
   }
 
+  void _showLanguagePicker(
+    BuildContext context,
+    SettingsController controller,
+  ) {
+    const languageCodes = [
+      'system',
+      'en',
+      'ta',
+      'hi',
+      'ar',
+      'es',
+      'fr',
+      'de',
+      'ja',
+      'zh',
+    ];
+    final strings = SoniqLocalizations.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceElevated,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 20),
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 8, bottom: 8),
+                child: Text(
+                  strings.text('language'),
+                  style: AppTypography.headlineSmall,
+                ),
+              ),
+              ...languageCodes.map((code) {
+                final title = code == 'system'
+                    ? strings.text('systemLanguage')
+                    : SoniqLocalizations.languageName(code);
+                return Obx(
+                  () => Semantics(
+                    selected: controller.languageCode.value == code,
+                    child: ListTile(
+                      minVerticalPadding: 10,
+                      title: Text(title),
+                      trailing: controller.languageCode.value == code
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: AppColors.primary,
+                            )
+                          : null,
+                      onTap: () async {
+                        await controller.setLanguage(code);
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                      },
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatItem(String label, String value) {
     return Column(
       children: [
         Text(
           value,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
           style: AppTypography.displayMedium.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -579,6 +741,9 @@ class SettingsView extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
@@ -593,17 +758,18 @@ class SettingsView extends StatelessWidget {
     BuildContext context,
     SettingsController controller,
   ) {
+    final strings = SoniqLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Excluded Directories'),
+        title: Text(strings.text('excludeDirectories')),
         content: SizedBox(
           width: double.maxFinite,
           child: Obx(() {
             if (controller.excludedDirectories.isEmpty) {
-              return const Text(
-                'No folders are excluded yet.',
+              return Text(
+                strings.text('noFoldersExcluded'),
                 style: TextStyle(color: AppColors.textMuted),
               );
             }
@@ -632,7 +798,7 @@ class SettingsView extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   trailing: IconButton(
-                    tooltip: 'Remove exclusion',
+                    tooltip: strings.text('removeExclusion'),
                     icon: const Icon(
                       Icons.close_rounded,
                       color: AppColors.textMuted,
@@ -649,11 +815,11 @@ class SettingsView extends StatelessWidget {
           TextButton.icon(
             onPressed: controller.addExcludedDirectory,
             icon: const Icon(Icons.create_new_folder_outlined),
-            label: const Text('Add folder'),
+            label: Text(strings.text('addFolder')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Done'),
+            child: Text(strings.text('done')),
           ),
         ],
       ),

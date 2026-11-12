@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../app/theme/app_colors.dart';
 
 class SpectrumVisualizerWidget extends StatefulWidget {
@@ -14,7 +15,8 @@ class SpectrumVisualizerWidget extends StatefulWidget {
   });
 
   @override
-  State<SpectrumVisualizerWidget> createState() => _SpectrumVisualizerWidgetState();
+  State<SpectrumVisualizerWidget> createState() =>
+      _SpectrumVisualizerWidgetState();
 }
 
 class _SpectrumVisualizerWidgetState extends State<SpectrumVisualizerWidget>
@@ -36,26 +38,38 @@ class _SpectrumVisualizerWidgetState extends State<SpectrumVisualizerWidget>
       if (target > _smoothedBars[i]) {
         _smoothedBars[i] = _smoothedBars[i] * 0.3 + target * 0.7; // Fast attack
       } else {
-        _smoothedBars[i] = _smoothedBars[i] * 0.85 + target * 0.15; // Smooth decay
+        _smoothedBars[i] =
+            _smoothedBars[i] * 0.85 + target * 0.15; // Smooth decay
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: widget.height,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D0E15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 0.8),
-      ),
-      child: CustomPaint(
-        size: Size(double.infinity, widget.height),
-        painter: _SpectrumPainter(
-          bars: _smoothedBars,
-          glowColor: AppColors.gold,
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return Semantics(
+      image: true,
+      label: reduceMotion
+          ? 'Static audio level display'
+          : 'Audio spectrum visualizer',
+      child: ExcludeSemantics(
+        child: Container(
+          height: widget.height,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0D0E15),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border, width: 0.8),
+          ),
+          child: CustomPaint(
+            size: Size(double.infinity, widget.height),
+            painter: _SpectrumPainter(
+              bars: reduceMotion
+                  ? List<double>.filled(16, 0.08)
+                  : _smoothedBars,
+              glowColor: AppColors.gold,
+            ),
+          ),
         ),
       ),
     );
@@ -66,10 +80,7 @@ class _SpectrumPainter extends CustomPainter {
   final List<double> bars;
   final Color glowColor;
 
-  _SpectrumPainter({
-    required this.bars,
-    required this.glowColor,
-  });
+  _SpectrumPainter({required this.bars, required this.glowColor});
 
   @override
   void paint(Canvas canvas, Size size) {

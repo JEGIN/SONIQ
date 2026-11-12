@@ -29,7 +29,8 @@ class AppColors {
   // Text Hierarchy
   static const Color textPrimary = Color(0xFFF8FAFC);
   static const Color textSecondary = Color(0xFF94A3B8);
-  static const Color textMuted = Color(0xFF64748B);
+  // Brighter muted copy maintains readable contrast on the OLED surfaces.
+  static const Color textMuted = Color(0xFF8391A5);
   static const Color textDark = Color(0xFF0F172A);
 
   // Waveform Palette

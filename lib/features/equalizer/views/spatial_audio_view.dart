@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../controllers/equalizer_controller.dart';
@@ -10,11 +12,12 @@ class SpatialAudioView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<EqualizerController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Spatial Audio & Output'),
+        title: Text(strings.text('spatialAudioOutput')),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -25,12 +28,18 @@ class SpatialAudioView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Connected Device Card
-              Obx(() => _buildDeviceCard(controller.connectedDevice.value)),
+              Obx(
+                () =>
+                    _buildDeviceCard(controller.connectedDevice.value, strings),
+              ),
 
               const SizedBox(height: 20),
 
               // 2. Spatial Sound Modes (Mono, Stereo, Wide Stereo, Virtual Surround, Headphone Spatial)
-              const Text('SOUNDSTAGE & SPATIAL MODE', style: AppTypography.labelLarge),
+              Text(
+                strings.text('soundstageMode').toUpperCase(),
+                style: AppTypography.labelLarge,
+              ),
               const SizedBox(height: 10),
               Obx(() {
                 final currentMode = controller.spatialMode.value;
@@ -39,8 +48,8 @@ class SpatialAudioView extends StatelessWidget {
                     _buildModeTile(
                       controller,
                       id: 'stereo',
-                      title: 'Original Stereo',
-                      subtitle: 'Direct high-fidelity left and right separation',
+                      title: strings.text('originalStereo'),
+                      subtitle: strings.text('directStereoDescription'),
                       icon: Icons.headphones_rounded,
                       isSelected: currentMode == 'stereo',
                     ),
@@ -48,8 +57,8 @@ class SpatialAudioView extends StatelessWidget {
                     _buildModeTile(
                       controller,
                       id: 'wide_stereo',
-                      title: 'Wide Stereo',
-                      subtitle: 'Expanded acoustic stereo field with center preservation',
+                      title: strings.text('wideStereo'),
+                      subtitle: strings.text('wideStereoDescription'),
                       icon: Icons.surround_sound_rounded,
                       isSelected: currentMode == 'wide_stereo',
                     ),
@@ -57,8 +66,8 @@ class SpatialAudioView extends StatelessWidget {
                     _buildModeTile(
                       controller,
                       id: 'headphone_spatial',
-                      title: 'Headphone Spatial Sound',
-                      subtitle: 'Binaural 3D spatial stage for in-ear and over-ear headphones',
+                      title: strings.text('headphoneSpatialSound'),
+                      subtitle: strings.text('binauralSpatialDescription'),
                       icon: Icons.spatial_audio_rounded,
                       isSelected: currentMode == 'headphone_spatial',
                     ),
@@ -66,8 +75,8 @@ class SpatialAudioView extends StatelessWidget {
                     _buildModeTile(
                       controller,
                       id: 'virtual_surround',
-                      title: 'Virtual Surround',
-                      subtitle: 'Transaural simulated 3D acoustic field for device speakers',
+                      title: strings.text('virtualSurround'),
+                      subtitle: strings.text('virtualSurroundDescription'),
                       icon: Icons.speaker_group_rounded,
                       isSelected: currentMode == 'virtual_surround',
                     ),
@@ -75,8 +84,8 @@ class SpatialAudioView extends StatelessWidget {
                     _buildModeTile(
                       controller,
                       id: 'mono',
-                      title: 'Balanced Mono Downmix',
-                      subtitle: 'Combines L+R into a unified balanced channel',
+                      title: strings.text('balancedMonoDownmix'),
+                      subtitle: strings.text('monoDownmixDescription'),
                       icon: Icons.volume_down_rounded,
                       isSelected: currentMode == 'mono',
                     ),
@@ -87,7 +96,10 @@ class SpatialAudioView extends StatelessWidget {
               const SizedBox(height: 24),
 
               // 3. Fine-Tune Sliders (Stereo Width, Surround Intensity, Channel Balance)
-              const Text('FINE-TUNE SPATIAL PARAMETERS', style: AppTypography.labelLarge),
+              Text(
+                strings.text('fineTuneSpatial').toUpperCase(),
+                style: AppTypography.labelLarge,
+              ),
               const SizedBox(height: 12),
 
               Container(
@@ -100,50 +112,84 @@ class SpatialAudioView extends StatelessWidget {
                 child: Column(
                   children: [
                     // Stereo Width (0% to 150%)
-                    Obx(() => Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Stereo Width', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                                Text('${controller.stereoWidth.value}%',
-                                    style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                            Slider(
+                    Obx(
+                      () => Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                strings.text('stereoWidth'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                '${controller.stereoWidth.value}%',
+                                style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Semantics(
+                            label: strings.text('stereoWidth'),
+                            child: Slider(
                               value: controller.stereoWidth.value.toDouble(),
                               min: 0,
                               max: 150,
                               activeColor: AppColors.gold,
                               inactiveColor: AppColors.surfaceHighlight,
-                              onChanged: (val) => controller.setStereoWidth(val.toInt()),
+                              onChanged: (val) =>
+                                  controller.setStereoWidth(val.toInt()),
                             ),
-                          ],
-                        )),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: 12),
 
                     // Virtual Surround Intensity (0% to 100%)
-                    Obx(() => Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Virtualizer Intensity', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                                Text('${(controller.virtualizer.value * 100).toInt()}%',
-                                    style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                            Slider(
+                    Obx(
+                      () => Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                strings.text('virtualizerIntensity'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                '${(controller.virtualizer.value * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Semantics(
+                            label: strings.text('virtualizerIntensity'),
+                            child: Slider(
                               value: controller.virtualizer.value,
                               min: 0.0,
                               max: 1.0,
                               activeColor: AppColors.gold,
                               inactiveColor: AppColors.surfaceHighlight,
-                              onChanged: (val) => controller.setVirtualizer(val),
+                              onChanged: (val) =>
+                                  controller.setVirtualizer(val),
                             ),
-                          ],
-                        )),
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: 12),
 
@@ -153,27 +199,43 @@ class SpatialAudioView extends StatelessWidget {
                       final balText = bal == 0.0
                           ? 'Center'
                           : (bal < 0
-                              ? 'L ${(bal.abs() * 100).toInt()}%'
-                              : 'R ${(bal * 100).toInt()}%');
+                                ? 'L ${(bal.abs() * 100).toInt()}%'
+                                : 'R ${(bal * 100).toInt()}%');
                       return Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Channel Balance', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
-                              Text(balText, style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.w700)),
+                              Text(
+                                strings.text('channelBalance'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                balText,
+                                style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ],
                           ),
-                          Slider(
-                            value: bal,
-                            min: -1.0,
-                            max: 1.0,
-                            activeColor: AppColors.gold,
-                            inactiveColor: AppColors.surfaceHighlight,
-                            onChanged: (val) {
-                              // Snap to 0
-                              controller.setBalance(val.abs() < 0.08 ? 0.0 : val);
-                            },
+                          Semantics(
+                            label: strings.text('channelBalance'),
+                            child: Slider(
+                              value: bal,
+                              min: -1.0,
+                              max: 1.0,
+                              activeColor: AppColors.gold,
+                              inactiveColor: AppColors.surfaceHighlight,
+                              onChanged: (val) {
+                                controller.setBalance(
+                                  val.abs() < 0.08 ? 0.0 : val,
+                                );
+                              },
+                            ),
                           ),
                         ],
                       );
@@ -186,7 +248,10 @@ class SpatialAudioView extends StatelessWidget {
 
               // 4. Limiter & Peak Protection
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(16),
@@ -195,21 +260,36 @@ class SpatialAudioView extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Audio Limiter & Clip Guard',
-                            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
+                        Text(
+                          strings.text('audioLimiterClipGuard'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                         SizedBox(height: 2),
-                        Text('Prevents distortion when bass boost is pushed high',
-                            style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        Text(
+                          strings.text('preventsDistortion'),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ],
                     ),
-                    Obx(() => Switch(
+                    Obx(
+                      () => Semantics(
+                        label: strings.text('audioLimiterClipGuard'),
+                        child: Switch(
                           value: controller.isLimiterEnabled.value,
                           activeThumbColor: AppColors.gold,
                           onChanged: (val) => controller.toggleLimiter(val),
-                        )),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -220,7 +300,7 @@ class SpatialAudioView extends StatelessWidget {
     );
   }
 
-  Widget _buildDeviceCard(String device) {
+  Widget _buildDeviceCard(String device, SoniqLocalizations strings) {
     IconData icon;
     String name;
     String desc;
@@ -228,23 +308,23 @@ class SpatialAudioView extends StatelessWidget {
     switch (device) {
       case 'bluetooth':
         icon = Icons.bluetooth_audio_rounded;
-        name = 'Bluetooth Audio';
-        desc = 'Wireless A2DP • Spatial audio tuned for wireless headphones';
+        name = strings.text('bluetoothAudio');
+        desc = strings.text('wirelessSpatialDescription');
         break;
       case 'wired_headphones':
         icon = Icons.headphones_rounded;
-        name = 'Wired Headphones / AUX';
-        desc = 'Analogue 3.5mm line-out • Binaural spatial stage active';
+        name = strings.text('wiredHeadphonesAux');
+        desc = strings.text('wiredSpatialDescription');
         break;
       case 'usb':
         icon = Icons.usb_rounded;
-        name = 'USB DAC / Audio Interface';
-        desc = 'Direct digital output stream • Bit-perfect path';
+        name = strings.text('usbDac');
+        desc = strings.text('usbSpatialDescription');
         break;
       default:
         icon = Icons.speaker_rounded;
-        name = 'Built-in Device Speaker';
-        desc = 'Phone speaker optimization • Transaural limiter active';
+        name = strings.text('builtInSpeaker');
+        desc = strings.text('builtInSpatialDescription');
     }
 
     return Container(
@@ -252,7 +332,10 @@ class SpatialAudioView extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35), width: 1.2),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.gold.withValues(alpha: 0.1),
@@ -278,20 +361,43 @@ class SpatialAudioView extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('ACTIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF10B981))),
+                      child: Text(
+                        strings.text('active').toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -308,35 +414,65 @@ class SpatialAudioView extends StatelessWidget {
     required IconData icon,
     required bool isSelected,
   }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => controller.setSpatialMode(id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.surfaceHighlight : AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.border,
-            width: isSelected ? 1.4 : 0.8,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: isSelected ? AppColors.gold : AppColors.textMuted, size: 24),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.textSecondary)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                ],
-              ),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$title. $subtitle',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => controller.setSpatialMode(id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.surfaceHighlight
+                : AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? AppColors.gold : AppColors.border,
+              width: isSelected ? 1.4 : 0.8,
             ),
-            if (isSelected) const Icon(Icons.check_circle_rounded, color: AppColors.gold, size: 20),
-          ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? AppColors.gold : AppColors.textMuted,
+                size: 24,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.gold,
+                  size: 20,
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -403,7 +403,8 @@ class MusicDiscoveryService {
         }
       }
 
-      if (clusterSongs.length >= 5) {
+      final minRequired = matchingSongs.length < 5 ? 1 : 3;
+      if (clusterSongs.length >= minRequired) {
         final clusterName = cluster.first;
         final topArtistInMix = clusterSongs.map((s) => s.artist).toSet().take(3).join(', ');
 
@@ -465,6 +466,11 @@ class MusicDiscoveryService {
         artistCounts[song.artist] = count + 1;
         if (selected.length >= limit) break;
       }
+    }
+
+    if (selected.isEmpty && library.isNotEmpty) {
+      final fallback = library.where((s) => !feedback.isExcluded(s)).take(limit).toList();
+      selected.addAll(fallback);
     }
 
     return RecommendationMix(

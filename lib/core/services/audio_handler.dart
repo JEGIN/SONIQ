@@ -7,21 +7,30 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../app/localization/soniq_localizations.dart';
+
 import '../models/song_model.dart';
 import '../database/song_cache_service.dart';
 import 'artwork_cache_service.dart';
 import 'audio_dsp_service.dart';
 import 'playback_tracker_service.dart';
 import 'music_discovery_service.dart';
+import '../utils/search_normalizer.dart';
 
-Future<SoniqAudioHandler> initAudioHandler() async {
+Future<SoniqAudioHandler> initAudioHandler({Locale? initialLocale}) async {
+  final strings = SoniqLocalizations(
+    SoniqLocalizations.resolve(
+      initialLocale ?? WidgetsBinding.instance.platformDispatcher.locale,
+    ),
+  );
   return await AudioService.init(
     builder: () => SoniqAudioHandler(),
     config: AudioServiceConfig(
       androidNotificationChannelId: 'com.soniq.soniq.channel.audio',
-      androidNotificationChannelName: 'SONIQ Playback',
-      androidNotificationChannelDescription:
-          'SONIQ High Fidelity Offline Music Player',
+      androidNotificationChannelName: strings.text('notificationChannel'),
+      androidNotificationChannelDescription: strings.text(
+        'notificationDescription',
+      ),
       androidNotificationIcon: 'mipmap/ic_launcher',
       androidNotificationOngoing: false,
       androidStopForegroundOnPause: false,
@@ -54,9 +63,7 @@ enum PlaybackIntent {
 }
 
 class SoniqAudioHandler extends BaseAudioHandler {
-  final AudioPlayer _player = AudioPlayer(
-    handleInterruptions: false,
-  );
+  final AudioPlayer _player = AudioPlayer(handleInterruptions: false);
   final SongCacheService _cacheService = SongCacheService();
   final ArtworkCacheService _artworkService = ArtworkCacheService();
 
@@ -131,7 +138,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
 
     // Handle headphone unplug or Bluetooth disconnect (Becoming Noisy)
     session.becomingNoisyEventStream.listen((_) {
-      debugPrint('SONIQ: Becoming noisy event received (headset unplugged / Bluetooth disconnected).');
+      debugPrint(
+        'SONIQ: Becoming noisy event received (headset unplugged / Bluetooth disconnected).',
+      );
       _playbackIntent = PlaybackIntent.manualPause;
       _interruptedRevision = -1;
       _intentRevision++;
@@ -162,10 +171,14 @@ class SoniqAudioHandler extends BaseAudioHandler {
               _interruptedRevision = ++_intentRevision;
               await _player.pause();
               _broadcastPlaybackState();
-              debugPrint('SONIQ: Playback interrupted. Will auto-resume when interruption ends.');
+              debugPrint(
+                'SONIQ: Playback interrupted. Will auto-resume when interruption ends.',
+              );
             } else {
               // Was ALREADY manually paused or stopped. PRESERVE user intent!
-              debugPrint('SONIQ: Interruption occurred while already paused/stopped. Preserving manual pause.');
+              debugPrint(
+                'SONIQ: Interruption occurred while already paused/stopped. Preserving manual pause.',
+              );
               if (_player.playing) {
                 await _player.pause();
                 _broadcastPlaybackState();
@@ -180,7 +193,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
             _intentRevision++;
             await _player.pause();
             _broadcastPlaybackState();
-            debugPrint('SONIQ: Permanent audio focus loss. Transitioned to manualPause.');
+            debugPrint(
+              'SONIQ: Permanent audio focus loss. Transitioned to manualPause.',
+            );
             break;
         }
       } else {
@@ -202,7 +217,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
               _playbackIntent = PlaybackIntent.playing;
               _interruptedRevision = -1;
               _intentRevision++;
-              debugPrint('SONIQ: Auto-resuming playback after genuine transient interruption.');
+              debugPrint(
+                'SONIQ: Auto-resuming playback after genuine transient interruption.',
+              );
               final granted = await session.setActive(true);
               if (granted) {
                 await _player.play();
@@ -273,7 +290,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
           true;
       // ONLY allow route auto-play if user is ALREADY actively in playing intent!
       // NEVER auto-play if user manually paused!
-      if (autoPlay && currentSong != null && _playbackIntent == PlaybackIntent.playing) {
+      if (autoPlay &&
+          currentSong != null &&
+          _playbackIntent == PlaybackIntent.playing) {
         play();
       }
     });
@@ -336,7 +355,8 @@ class SoniqAudioHandler extends BaseAudioHandler {
   }
 
   void _broadcastPlaybackState() {
-    final playing = _player.playing && _playbackIntent == PlaybackIntent.playing;
+    final playing =
+        _player.playing && _playbackIntent == PlaybackIntent.playing;
     final isFav = currentSong?.isFavorite ?? false;
 
     playbackState.add(
@@ -636,7 +656,8 @@ class SoniqAudioHandler extends BaseAudioHandler {
   }
 
   List<SongModel> _lastClearedUpcoming = [];
-  List<SongModel> get lastClearedUpcoming => List.unmodifiable(_lastClearedUpcoming);
+  List<SongModel> get lastClearedUpcoming =>
+      List.unmodifiable(_lastClearedUpcoming);
 
   /// Clears upcoming songs in the queue while keeping currently playing song at index 0.
   /// Returns the cleared upcoming songs so they can be restored via Undo.
@@ -733,7 +754,9 @@ class SoniqAudioHandler extends BaseAudioHandler {
             .toList();
 
         if (restored.isNotEmpty) {
-          final savedOrigIds = _cacheService.getSetting('saved_original_queue_ids');
+          final savedOrigIds = _cacheService.getSetting(
+            'saved_original_queue_ids',
+          );
           if (savedOrigIds is List && savedOrigIds.isNotEmpty) {
             final orig = savedOrigIds
                 .map((id) => songMap[id])
@@ -873,7 +896,8 @@ class SoniqAudioHandler extends BaseAudioHandler {
         return;
       }
 
-      if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
+      if (_playbackIntent != PlaybackIntent.playing ||
+          currentRev != _intentRevision) {
         debugPrint('SONIQ: Loading track superseded by user manual pause.');
         return;
       }
@@ -904,8 +928,11 @@ class SoniqAudioHandler extends BaseAudioHandler {
         }
       }
 
-      if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
-        debugPrint('SONIQ: Loading track completed but playback was paused in the interim.');
+      if (_playbackIntent != PlaybackIntent.playing ||
+          currentRev != _intentRevision) {
+        debugPrint(
+          'SONIQ: Loading track completed but playback was paused in the interim.',
+        );
         return;
       }
 
@@ -1108,13 +1135,16 @@ class SoniqAudioHandler extends BaseAudioHandler {
     final session = await AudioSession.instance;
     final granted = await session.setActive(true);
     if (!granted) {
-      debugPrint('SONIQ: Audio focus request denied by Android. Aborting play.');
+      debugPrint(
+        'SONIQ: Audio focus request denied by Android. Aborting play.',
+      );
       _playbackIntent = PlaybackIntent.manualPause;
       _broadcastPlaybackState();
       return;
     }
 
-    if (_playbackIntent != PlaybackIntent.playing || currentRev != _intentRevision) {
+    if (_playbackIntent != PlaybackIntent.playing ||
+        currentRev != _intentRevision) {
       debugPrint('SONIQ: Play superseded by subsequent user command.');
       return;
     }
@@ -1510,7 +1540,10 @@ class SoniqAudioHandler extends BaseAudioHandler {
     // Discovery Mixes Container
     if (parentMediaId == 'category_discovery') {
       final discoveryService = MusicDiscoveryService();
-      final dailyMixes = discoveryService.generateDailyMixes(cachedSongs, mixesCount: 3);
+      final dailyMixes = discoveryService.generateDailyMixes(
+        cachedSongs,
+        mixesCount: 3,
+      );
       final items = <MediaItem>[];
       for (final mix in dailyMixes) {
         items.add(
@@ -2253,14 +2286,14 @@ class SoniqAudioHandler extends BaseAudioHandler {
     Map<String, dynamic>? extras,
   ]) async {
     if (query.trim().isEmpty) return [];
-    final q = query.toLowerCase().trim();
+    final q = SearchNormalizer.normalize(query.trim());
     final cachedSongs = _cacheService.getCachedSongs();
     final results = cachedSongs
         .where(
           (s) =>
-              s.title.toLowerCase().contains(q) ||
-              s.artist.toLowerCase().contains(q) ||
-              s.album.toLowerCase().contains(q),
+              SearchNormalizer.normalize(s.title).contains(q) ||
+              SearchNormalizer.normalize(s.artist).contains(q) ||
+              SearchNormalizer.normalize(s.album).contains(q),
         )
         .toList();
     return results.map((s) => _songToMediaItem(s)).toList();

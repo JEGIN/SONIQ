@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_tokens.dart';
 
 class SoniqCard extends StatelessWidget {
   final Widget child;
@@ -19,7 +21,7 @@ class SoniqCard extends StatelessWidget {
     this.margin,
     this.backgroundColor,
     this.borderColor,
-    this.borderRadius = 18.0,
+    this.borderRadius = AppTokens.radiusCard,
     this.gradient,
   });
 
@@ -31,10 +33,7 @@ class SoniqCard extends StatelessWidget {
         color: backgroundColor ?? AppColors.surface,
         gradient: gradient,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: borderColor ?? AppColors.border,
-          width: 1,
-        ),
+        border: Border.all(color: borderColor ?? AppColors.border, width: 1),
       ),
       child: Material(
         color: Colors.transparent,

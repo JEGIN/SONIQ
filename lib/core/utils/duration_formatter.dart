@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 class DurationFormatter {
   DurationFormatter._();
 
@@ -10,9 +12,9 @@ class DurationFormatter {
     final seconds = duration.inSeconds.remainder(60);
 
     if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      return '${_twoDigits(hours)}:${_twoDigits(minutes)}:${_twoDigits(seconds)}';
     }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return '${_twoDigits(minutes)}:${_twoDigits(seconds)}';
   }
 
   /// Formats milliseconds to precision MM:SS.cc (hundredths of a second)
@@ -24,7 +26,7 @@ class DurationFormatter {
     final seconds = duration.inSeconds.remainder(60);
     final hundredths = ((milliseconds % 1000) / 10).floor();
 
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${hundredths.toString().padLeft(2, '0')}';
+    return '${_twoDigits(minutes)}:${_twoDigits(seconds)}.${_twoDigits(hundredths)}';
   }
 
   /// Formats seconds double to timeline ruler notation: 02:00.00
@@ -34,6 +36,8 @@ class DurationFormatter {
     final seconds = (secondsTotal % 60).floor();
     final hundredths = ((secondsTotal * 100) % 100).floor();
 
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}.${hundredths.toString().padLeft(2, '0')}';
+    return '${_twoDigits(minutes)}:${_twoDigits(seconds)}.${_twoDigits(hundredths)}';
   }
+
+  static String _twoDigits(int value) => NumberFormat('00').format(value);
 }

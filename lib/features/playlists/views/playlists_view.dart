@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/song_model.dart';
@@ -24,7 +26,8 @@ class PlaylistsView extends StatefulWidget {
   State<PlaylistsView> createState() => _PlaylistsViewState();
 }
 
-class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProviderStateMixin {
+class _PlaylistsViewState extends State<PlaylistsView>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
   @override
@@ -45,7 +48,8 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
       if (lib.allSongs.isNotEmpty) return lib.allSongs.toList();
     }
     if (Get.isRegistered<SmartPlaylistController>()) {
-      final cached = Get.find<SmartPlaylistController>().cacheService.getCachedSongs();
+      final cached = Get.find<SmartPlaylistController>().cacheService
+          .getCachedSongs();
       if (cached.isNotEmpty) return cached;
     }
     if (Get.isRegistered<HomeController>()) {
@@ -57,6 +61,7 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     final playlistController = Get.find<PlaylistController>();
     final smartCtrl = Get.find<SmartPlaylistController>();
     final playerController = Get.find<AudioPlayerController>();
@@ -73,18 +78,33 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Playlists', style: AppTypography.displayLarge),
+                    Text(
+                      strings.text('playlists'),
+                      style: AppTypography.displayLarge,
+                    ),
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 24),
-                          tooltip: 'AI Smart Studio',
-                          onPressed: () => SmartPlaylistGeneratorDialog.show(context),
+                          icon: const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
+                          tooltip: strings.text('aiPlaylistStudio'),
+                          onPressed: () =>
+                              SmartPlaylistGeneratorDialog.show(context),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.add_rounded, color: AppColors.gold, size: 28),
-                          tooltip: 'Create Manual Playlist',
-                          onPressed: () => _showCreatePlaylistDialog(context, playlistController),
+                          icon: const Icon(
+                            Icons.add_rounded,
+                            color: AppColors.gold,
+                            size: 28,
+                          ),
+                          tooltip: strings.text('createPlaylist'),
+                          onPressed: () => _showCreatePlaylistDialog(
+                            context,
+                            playlistController,
+                          ),
                         ),
                       ],
                     ),
@@ -116,17 +136,23 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                     ),
                     labelColor: AppColors.gold,
                     unselectedLabelColor: AppColors.textSecondary,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-                    unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                     dividerColor: Colors.transparent,
-                    tabs: const [
+                    tabs: [
                       Tab(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.auto_awesome_rounded, size: 16),
                             SizedBox(width: 8),
-                            Text('AI Smart Playlists'),
+                            Text(strings.text('aiSmartPlaylists')),
                           ],
                         ),
                       ),
@@ -136,7 +162,7 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                           children: [
                             Icon(Icons.queue_music_rounded, size: 16),
                             SizedBox(width: 8),
-                            Text('Manual'),
+                            Text(strings.text('manual')),
                           ],
                         ),
                       ),
@@ -150,7 +176,11 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
             controller: _tabController,
             children: [
               _buildSmartPlaylistsTab(context, smartCtrl, playerController),
-              _buildManualPlaylistsTab(context, playlistController, playerController),
+              _buildManualPlaylistsTab(
+                context,
+                playlistController,
+                playerController,
+              ),
             ],
           ),
         ),
@@ -167,6 +197,7 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
     SmartPlaylistController smartCtrl,
     AudioPlayerController playerCtrl,
   ) {
+    final strings = SoniqLocalizations.of(context);
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -200,7 +231,11 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -209,14 +244,24 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                       children: [
                         Row(
                           children: [
-                            const Text('AI Playlist Studio', style: AppTypography.headlineSmall),
+                            Text(
+                              strings.text('aiPlaylistStudio'),
+                              style: AppTypography.headlineSmall,
+                            ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFD946EF).withValues(alpha: 0.25),
+                                color: const Color(0xFFD946EF)
+                                    .withValues(alpha: 0.25),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFD946EF), width: 0.8),
+                                border: Border.all(
+                                  color: const Color(0xFFD946EF),
+                                  width: 0.8,
+                                ),
                               ),
                               child: const Text(
                                 'OFFLINE MIR',
@@ -231,16 +276,23 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Generate mood, energy & Tamil smart mixes',
+                        Text(
+                          strings.text('generateMoodEnergyMixes'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.textMuted,
+                    size: 14,
+                  ),
                 ],
               ),
             ),
@@ -255,23 +307,34 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
               borderRadius: BorderRadius.circular(12),
               onTap: () => AiPlaylistGeneratorSheet.show(context),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border, width: 0.8),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(Icons.bolt_rounded, color: AppColors.gold, size: 20),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Quick Vibe Generator (Prompt / Instant Mix)',
-                        style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                        strings.text('quickVibeGenerator'),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
@@ -291,7 +354,10 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                   decoration: BoxDecoration(
                     color: const Color(0xFF1A1D2B),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 0.8),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.4),
+                      width: 0.8,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,23 +365,34 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
+                          Row(
                             children: [
                               SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.gold,
+                                ),
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'Analyzing Audio Features Offline...',
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                                strings.text('analyzingAudioOffline'),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ],
                           ),
                           Text(
                             '$pct%',
-                            style: const TextStyle(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w800),
+                            style: const TextStyle(
+                              color: AppColors.gold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ],
                       ),
@@ -325,7 +402,9 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                         child: LinearProgressIndicator(
                           value: smartCtrl.analysisProgress.value,
                           backgroundColor: AppColors.surface,
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.gold,
+                          ),
                           minHeight: 4,
                         ),
                       ),
@@ -345,11 +424,20 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('AI Mood & Energy Playlists', style: AppTypography.headlineMedium),
-                Obx(() => Text(
-                      '${smartCtrl.smartPlaylists.length} Smart',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
-                    )),
+                Text(
+                  strings.text('aiMoodEnergyPlaylists'),
+                  style: AppTypography.headlineMedium,
+                ),
+                Obx(
+                  () => Text(
+                    '${smartCtrl.smartPlaylists.length} Smart',
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -361,11 +449,14 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
           final library = _getLibrary();
 
           if (lists.isEmpty) {
-            return const SliverToBoxAdapter(
+            return SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(
-                  child: Text('No Smart Playlists yet', style: TextStyle(color: AppColors.textMuted)),
+                  child: Text(
+                    strings.text('noSmartPlaylists'),
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
                 ),
               ),
             );
@@ -374,120 +465,156 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
           return SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 90),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final pl = lists[index];
-                  final matchedSongs = smartCtrl.evaluatePlaylist(pl, library);
-                  final color = Color(pl.colorHex);
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final pl = lists[index];
+                final matchedSongs = smartCtrl.evaluatePlaylist(pl, library);
+                final color = Color(pl.colorHex);
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: SoniqCard(
-                      padding: const EdgeInsets.all(12),
-                      onTap: () => Get.to(() => SmartPlaylistDetailView(playlist: pl)),
-                      child: Row(
-                        children: [
-                          // Mood Color Icon
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [color.withValues(alpha: 0.8), color.withValues(alpha: 0.3)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: color.withValues(alpha: 0.5), width: 1.2),
-                            ),
-                            child: Icon(
-                              _getIconForPlaylist(pl.rules.selectedMoods.isNotEmpty ? pl.rules.selectedMoods.first : ''),
-                              color: Colors.white,
-                              size: 26,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-
-                          // Playlist Title & Rules Summary
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        pl.name,
-                                        style: AppTypography.labelLarge.copyWith(fontSize: 15),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text(
-                                        'SMART',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  pl.description.isNotEmpty
-                                      ? pl.description
-                                      : '${matchedSongs.length} tracks matched',
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: SoniqCard(
+                    padding: const EdgeInsets.all(12),
+                    onTap: () =>
+                        Get.to(() => SmartPlaylistDetailView(playlist: pl)),
+                    child: Row(
+                      children: [
+                        // Mood Color Icon
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                color.withValues(alpha: 0.8),
+                                color.withValues(alpha: 0.3),
                               ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: color.withValues(alpha: 0.5),
+                              width: 1.2,
                             ),
                           ),
+                          child: Icon(
+                            _getIconForPlaylist(
+                              pl.rules.selectedMoods.isNotEmpty
+                                  ? pl.rules.selectedMoods.first
+                                  : '',
+                            ),
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
 
-                          // Track Count Pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border, width: 0.8),
-                            ),
-                            child: Text(
-                              '${matchedSongs.length}',
-                              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w800),
-                            ),
+                        // Playlist Title & Rules Summary
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      pl.name,
+                                      style: AppTypography.labelLarge.copyWith(
+                                        fontSize: 15,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'SMART',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                pl.description.isNotEmpty
+                                    ? pl.description
+                                    : '${matchedSongs.length} tracks matched',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
+                        ),
 
-                          // Play Button
-                          IconButton(
-                            icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.gold, size: 32),
-                            tooltip: 'Play Smart Playlist',
-                            onPressed: () {
-                              if (matchedSongs.isNotEmpty) {
-                                playerCtrl.playSong(matchedSongs.first, matchedSongs);
-                              } else {
-                                Get.snackbar(pl.name, 'No matching tracks in library.');
-                              }
-                            },
+                        // Track Count Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
-                        ],
-                      ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Text(
+                            '${matchedSongs.length}',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Play Button
+                        IconButton(
+                          icon: const Icon(
+                            Icons.play_circle_fill_rounded,
+                            color: AppColors.gold,
+                            size: 32,
+                          ),
+                          tooltip: strings.text('playSmartPlaylist'),
+                          onPressed: () {
+                            if (matchedSongs.isNotEmpty) {
+                              playerCtrl.playSong(
+                                matchedSongs.first,
+                                matchedSongs,
+                              );
+                            } else {
+                              Get.snackbar(
+                                pl.name,
+                                strings.text('noMatchingTracks'),
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                  );
-                },
-                childCount: lists.length,
-              ),
+                  ),
+                );
+              }, childCount: lists.length),
             ),
           );
         }),
@@ -504,6 +631,7 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
     PlaylistController playlistController,
     AudioPlayerController playerController,
   ) {
+    final strings = SoniqLocalizations.of(context);
     final homeController = Get.find<HomeController>();
 
     return CustomScrollView(
@@ -530,11 +658,24 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 28),
+                          const Icon(
+                            Icons.favorite_rounded,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
                           const SizedBox(height: 14),
-                          const Text('Favorites', style: AppTypography.headlineSmall),
+                          Text(
+                            strings.text('favorites'),
+                            style: AppTypography.headlineSmall,
+                          ),
                           const SizedBox(height: 4),
-                          Text('$favCount tracks', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          Text(
+                            '$favCount tracks',
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -546,7 +687,12 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                   child: Obx(() {
                     final recentCount = homeController.recentlyPlayed.length;
                     return SoniqCard(
-                      onTap: () => _openSmartPlaylist(context, 'Recently Played', homeController.recentlyPlayed, playerController),
+                      onTap: () => _openSmartPlaylist(
+                        context,
+                        'Recently Played',
+                        homeController.recentlyPlayed,
+                        playerController,
+                      ),
                       gradient: const LinearGradient(
                         colors: [Color(0xFF16253B), Color(0xFF101622)],
                         begin: Alignment.topLeft,
@@ -555,11 +701,24 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.history_rounded, color: AppColors.cyan, size: 28),
+                          const Icon(
+                            Icons.history_rounded,
+                            color: AppColors.cyan,
+                            size: 28,
+                          ),
                           const SizedBox(height: 14),
-                          const Text('Recently Played', style: AppTypography.headlineSmall),
+                          Text(
+                            strings.text('recentlyPlayed'),
+                            style: AppTypography.headlineSmall,
+                          ),
                           const SizedBox(height: 4),
-                          Text('$recentCount tracks', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          Text(
+                            '$recentCount tracks',
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -570,10 +729,13 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
           ),
         ),
 
-        const SliverToBoxAdapter(
+        SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 16, 8),
-            child: Text('Your Playlists', style: AppTypography.headlineMedium),
+            child: Text(
+              strings.text('yourPlaylists'),
+              style: AppTypography.headlineMedium,
+            ),
           ),
         ),
 
@@ -583,18 +745,34 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
           if (lists.isEmpty) {
             return SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 32,
+                ),
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.queue_music_rounded, size: 48, color: AppColors.textMuted.withValues(alpha: 0.5)),
+                      Icon(
+                        Icons.queue_music_rounded,
+                        size: 48,
+                        color: AppColors.textMuted.withValues(alpha: 0.5),
+                      ),
                       const SizedBox(height: 12),
-                      const Text('No custom playlists yet', style: TextStyle(color: AppColors.textSecondary)),
+                      Text(
+                        strings.text('noCustomPlaylists'),
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                       const SizedBox(height: 8),
                       TextButton.icon(
                         icon: const Icon(Icons.add, color: AppColors.primary),
-                        label: const Text('Create Playlist', style: TextStyle(color: AppColors.primary)),
-                        onPressed: () => _showCreatePlaylistDialog(context, playlistController),
+                        label: Text(
+                          strings.text('createPlaylist'),
+                          style: const TextStyle(color: AppColors.primary),
+                        ),
+                        onPressed: () => _showCreatePlaylistDialog(
+                          context,
+                          playlistController,
+                        ),
                       ),
                     ],
                   ),
@@ -606,48 +784,68 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
           return SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final pl = lists[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: SoniqCard(
-                      padding: const EdgeInsets.all(12),
-                      onTap: () => Get.to(() => PlaylistDetailView(playlist: pl)),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceElevated,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border, width: 0.8),
-                            ),
-                            child: const Icon(Icons.queue_music_rounded, color: AppColors.secondary, size: 26),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(pl.name, style: AppTypography.labelLarge.copyWith(fontSize: 15)),
-                                const SizedBox(height: 4),
-                                Text('${pl.songCount} songs', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                              ],
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final pl = lists[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: SoniqCard(
+                    padding: const EdgeInsets.all(12),
+                    onTap: () => Get.to(() => PlaylistDetailView(playlist: pl)),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 0.8,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.play_arrow_rounded, color: AppColors.primary, size: 28),
-                            onPressed: () => playlistController.playEntirePlaylist(pl),
+                          child: const Icon(
+                            Icons.queue_music_rounded,
+                            color: AppColors.secondary,
+                            size: 26,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pl.name,
+                                style: AppTypography.labelLarge.copyWith(
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${pl.songCount} songs',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
+                          onPressed: () =>
+                              playlistController.playEntirePlaylist(pl),
+                        ),
+                      ],
                     ),
-                  );
-                },
-                childCount: lists.length,
-              ),
+                  ),
+                );
+              }, childCount: lists.length),
             ),
           );
         }),
@@ -688,7 +886,12 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
     }
   }
 
-  void _openSmartPlaylist(BuildContext context, String title, List<dynamic> songs, AudioPlayerController playerCtrl) {
+  void _openSmartPlaylist(
+    BuildContext context,
+    String title,
+    List<dynamic> songs,
+    AudioPlayerController playerCtrl,
+  ) {
     if (songs.isEmpty) {
       Get.snackbar(title, 'No songs in $title yet.');
       return;
@@ -711,9 +914,16 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('$title (${songs.length})', style: AppTypography.headlineMedium),
+                  Text(
+                    '$title (${songs.length})',
+                    style: AppTypography.headlineMedium,
+                  ),
                   IconButton(
-                    icon: const Icon(Icons.play_circle_fill_rounded, color: AppColors.primary, size: 32),
+                    icon: const Icon(
+                      Icons.play_circle_fill_rounded,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
                     onPressed: () {
                       playerCtrl.playSong(songs.first, songs.cast());
                       Navigator.pop(context);
@@ -742,18 +952,25 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
     );
   }
 
-  void _showCreatePlaylistDialog(BuildContext context, PlaylistController controller) {
+  void _showCreatePlaylistDialog(
+    BuildContext context,
+    PlaylistController controller,
+  ) {
+    final strings = SoniqLocalizations.of(context);
     final textController = TextEditingController();
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('New Playlist', style: AppTypography.headlineMedium),
+        title: Text(
+          strings.text('newPlaylist'),
+          style: AppTypography.headlineMedium,
+        ),
         content: TextField(
           controller: textController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Playlist Name',
+            hintText: strings.text('playlistName'),
             hintStyle: const TextStyle(color: AppColors.textMuted),
             filled: true,
             fillColor: AppColors.surface,
@@ -762,11 +979,20 @@ class _PlaylistsViewState extends State<PlaylistsView> with SingleTickerProvider
         ),
         actions: [
           TextButton(
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              strings.text('cancel'),
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text('Create', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: Text(
+              strings.text('create'),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onPressed: () {
               if (textController.text.trim().isNotEmpty) {
                 controller.createPlaylist(textController.text);

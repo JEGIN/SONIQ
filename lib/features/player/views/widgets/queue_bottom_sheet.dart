@@ -1,13 +1,18 @@
 import 'dart:math';
 import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:on_audio_query/on_audio_query.dart' hide SongModel;
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/models/song_model.dart';
 import '../../../../core/utils/duration_formatter.dart';
+import '../../../../core/utils/search_normalizer.dart';
+import '../../../../app/localization/soniq_localizations.dart';
 import '../../../playlists/controllers/playlist_controller.dart';
 import '../../../playlists/controllers/favorites_controller.dart';
 import '../../controllers/player_controller.dart';
@@ -30,7 +35,8 @@ class QueueBottomSheet extends StatefulWidget {
   State<QueueBottomSheet> createState() => _QueueBottomSheetState();
 }
 
-class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerProviderStateMixin {
+class _QueueBottomSheetState extends State<QueueBottomSheet>
+    with SingleTickerProviderStateMixin {
   final playerController = Get.find<AudioPlayerController>();
   final playlistController = Get.find<PlaylistController>();
 
@@ -76,10 +82,10 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
             _buildHeaderToolbar(context),
 
             // 3. Search Bar (when active)
-            if (_isSearchActive) _buildSearchBar(),
+            if (_isSearchActive) _buildSearchBar(context),
 
             // 4. Tab Selector (Upcoming vs History)
-            _buildTabSelector(),
+            _buildTabSelector(context),
 
             const Divider(color: AppColors.border, height: 1),
 
@@ -99,14 +105,15 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   }
 
   Widget _buildHeaderToolbar(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 6, 12, 6),
       child: Row(
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Playback Queue', style: AppTypography.headlineMedium),
+              Text(strings.text('queue'), style: AppTypography.headlineMedium),
               Obx(() {
                 final total = playerController.queue.length;
                 final currIdx = playerController.currentIndex.value;
@@ -122,8 +129,8 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
 
                 return Text(
                   upcomingCount > 0
-                      ? '$total tracks • $upcomingCount upcoming ($durStr)'
-                      : '$total tracks • Queue ending',
+                      ? '$total ${strings.text('trackCountLabel')} • $upcomingCount ${strings.text('upcomingQueue')} ($durStr)'
+                      : '$total ${strings.text('trackCountLabel')} • ${strings.text('queueEnding')}',
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -142,7 +149,7 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
               color: _isSearchActive ? AppColors.gold : AppColors.textSecondary,
               size: 22,
             ),
-            tooltip: 'Search Queue',
+            tooltip: strings.text('searchQueue'),
             onPressed: () {
               setState(() {
                 _isSearchActive = !_isSearchActive;
@@ -156,21 +163,33 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
 
           // Save Queue as Playlist
           IconButton(
-            icon: const Icon(Icons.playlist_add_rounded, color: AppColors.textSecondary, size: 24),
-            tooltip: 'Save Queue as Playlist',
+            icon: const Icon(
+              Icons.playlist_add_rounded,
+              color: AppColors.textSecondary,
+              size: 24,
+            ),
+            tooltip: strings.text('saveAsPlaylist'),
             onPressed: () => _showSaveQueueDialog(context),
           ),
 
           // Clear Upcoming Queue
           IconButton(
-            icon: const Icon(Icons.clear_all_rounded, color: AppColors.textSecondary, size: 24),
-            tooltip: 'Clear Upcoming Queue',
+            icon: const Icon(
+              Icons.clear_all_rounded,
+              color: AppColors.textSecondary,
+              size: 24,
+            ),
+            tooltip: strings.text('clearQueue'),
             onPressed: () => _confirmClearQueue(context),
           ),
 
           // Close
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 22),
+            icon: const Icon(
+              Icons.close_rounded,
+              color: AppColors.textMuted,
+              size: 22,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -178,7 +197,8 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Container(
@@ -193,12 +213,23 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
           autofocus: true,
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'Filter songs in queue...',
-            hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.gold, size: 18),
+            hintText: strings.text('filterQueue'),
+            hintStyle: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.gold,
+              size: 18,
+            ),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 16),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textMuted,
+                      size: 16,
+                    ),
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _searchQuery = '');
@@ -209,30 +240,30 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
           ),
           onChanged: (val) {
-            setState(() => _searchQuery = val.trim().toLowerCase());
+            setState(
+              () => _searchQuery = SearchNormalizer.normalize(val.trim()),
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildTabSelector() {
+  Widget _buildTabSelector(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
       child: Row(
         children: [
           Expanded(
             child: _buildTabPill(
-              title: 'Upcoming Queue',
+              title: strings.text('upcomingQueue'),
               index: 0,
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: _buildTabPill(
-              title: 'History',
-              index: 1,
-            ),
+            child: _buildTabPill(title: strings.text('history'), index: 1),
           ),
         ],
       ),
@@ -278,13 +309,20 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   Widget _buildUpcomingQueueList() {
     final fullQueue = playerController.queue;
     if (fullQueue.isEmpty) {
-      return const Center(
-        child: Text('Playback queue is empty', style: TextStyle(color: AppColors.textSecondary)),
+      return Center(
+        child: Text(
+          SoniqLocalizations.of(context).text('emptyQueue'),
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
       );
     }
 
-    final currIdx = playerController.currentIndex.value.clamp(0, fullQueue.length - 1);
-    final currentSong = playerController.currentSong.value ?? fullQueue[currIdx];
+    final currIdx = playerController.currentIndex.value.clamp(
+      0,
+      fullQueue.length - 1,
+    );
+    final currentSong =
+        playerController.currentSong.value ?? fullQueue[currIdx];
 
     // Upcoming items are those after current index
     List<SongModel> upcomingList;
@@ -296,19 +334,21 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
 
     // Filter by search query if active
     if (_searchQuery.isNotEmpty) {
-      upcomingList = upcomingList.where((s) =>
-          s.title.toLowerCase().contains(_searchQuery) ||
-          s.artist.toLowerCase().contains(_searchQuery) ||
-          s.album.toLowerCase().contains(_searchQuery)).toList();
+      upcomingList = upcomingList
+          .where(
+            (s) =>
+                SearchNormalizer.normalize(s.title).contains(_searchQuery) ||
+                SearchNormalizer.normalize(s.artist).contains(_searchQuery) ||
+                SearchNormalizer.normalize(s.album).contains(_searchQuery),
+          )
+          .toList();
     }
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         // 1. NOW PLAYING SECTION
-        SliverToBoxAdapter(
-          child: _buildNowPlayingSection(currentSong),
-        ),
+        SliverToBoxAdapter(child: _buildNowPlayingSection(currentSong)),
 
         // 2. UPCOMING HEADER
         SliverToBoxAdapter(
@@ -355,53 +395,59 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                   _searchQuery.isNotEmpty
                       ? 'No songs matching "$_searchQuery"'
                       : 'No upcoming songs. Add songs using "Play Next".',
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
           )
         else if (_searchQuery.isNotEmpty)
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final song = upcomingList[index];
-                final absoluteIndex = fullQueue.indexOf(song);
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final song = upcomingList[index];
+              final absoluteIndex = fullQueue.indexOf(song);
 
-                return Material(
-                  key: ValueKey('search_queue_item_${song.id}_$absoluteIndex'),
-                  color: Colors.transparent,
-                  child: _buildQueueTile(
-                    context,
-                    song: song,
-                    absoluteIndex: absoluteIndex >= 0 ? absoluteIndex : currIdx + 1 + index,
-                    isUpcoming: true,
-                    reorderIndex: null,
-                  ),
-                );
-              },
-              childCount: upcomingList.length,
-            ),
+              return Material(
+                key: ValueKey('search_queue_item_${song.id}_$absoluteIndex'),
+                color: Colors.transparent,
+                child: _buildQueueTile(
+                  context,
+                  song: song,
+                  absoluteIndex: absoluteIndex >= 0
+                      ? absoluteIndex
+                      : currIdx + 1 + index,
+                  isUpcoming: true,
+                  reorderIndex: null,
+                ),
+              );
+            }, childCount: upcomingList.length),
           )
         else
           SliverReorderableList(
             itemCount: upcomingList.length,
-            proxyDecorator: (Widget child, int index, Animation<double> animation) {
-              return AnimatedBuilder(
-                animation: animation,
-                builder: (BuildContext context, Widget? animChild) {
-                  final double animValue = Curves.easeInOut.transform(animation.value);
-                  final double elevation = lerpDouble(0, 10, animValue) ?? 8.0;
-                  return Material(
-                    elevation: elevation,
-                    color: const Color(0xFF262938),
-                    shadowColor: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(14),
-                    child: animChild,
+            proxyDecorator:
+                (Widget child, int index, Animation<double> animation) {
+                  return AnimatedBuilder(
+                    animation: animation,
+                    builder: (BuildContext context, Widget? animChild) {
+                      final double animValue = Curves.easeInOut.transform(
+                        animation.value,
+                      );
+                      final double elevation =
+                          lerpDouble(0, 10, animValue) ?? 8.0;
+                      return Material(
+                        elevation: elevation,
+                        color: const Color(0xFF262938),
+                        shadowColor: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(14),
+                        child: animChild,
+                      );
+                    },
+                    child: child,
                   );
                 },
-                child: child,
-              );
-            },
             onReorderStart: (_) {
               HapticFeedback.selectionClick();
             },
@@ -429,9 +475,19 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                     color: const Color(0xFF8B0000),
                     child: const Row(
                       children: [
-                        Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                         SizedBox(width: 8),
-                        Text('Remove', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        Text(
+                          'Remove',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -442,14 +498,26 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text('Remove', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                        Text(
+                          'Remove',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         SizedBox(width: 8),
-                        Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ],
                     ),
                   ),
                   onDismissed: (_) {
-                    final removedSong = playerController.removeFromQueue(absoluteIndex);
+                    final removedSong = playerController.removeFromQueue(
+                      absoluteIndex,
+                    );
                     HapticFeedback.mediumImpact();
 
                     if (removedSong != null) {
@@ -460,13 +528,19 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                           duration: const Duration(seconds: 4),
                           content: Text(
                             'Removed "${removedSong.title}"',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           action: SnackBarAction(
                             label: 'UNDO',
                             textColor: AppColors.gold,
                             onPressed: () {
-                              playerController.undoRemove(absoluteIndex, removedSong);
+                              playerController.undoRemove(
+                                absoluteIndex,
+                                removedSong,
+                              );
                             },
                           ),
                         ),
@@ -488,9 +562,7 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
             },
           ),
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 30),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 30)),
       ],
     );
   }
@@ -500,13 +572,17 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   // ==========================================
 
   Widget _buildNowPlayingSection(SongModel song) {
+    final strings = SoniqLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF1E202B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.6), width: 1.2),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.6),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.gold.withValues(alpha: 0.15),
@@ -529,9 +605,9 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
-                'NOW PLAYING',
-                style: TextStyle(
+              Text(
+                strings.text('nowPlayingUpper'),
+                style: const TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.0,
@@ -540,7 +616,11 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
               ),
               const Spacer(),
               // Animated Equalizer Visualizer Bars
-              Obx(() => _buildAnimatedEqualizerBars(playerController.isPlaying.value)),
+              Obx(
+                () => _buildAnimatedEqualizerBars(
+                  playerController.isPlaying.value,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -559,7 +639,11 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                     artworkFit: BoxFit.cover,
                     nullArtworkWidget: Container(
                       color: AppColors.surfaceHighlight,
-                      child: const Icon(Icons.music_note_rounded, color: AppColors.gold, size: 26),
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        color: AppColors.gold,
+                        size: 26,
+                      ),
                     ),
                   ),
                 ),
@@ -606,9 +690,16 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                     return Obx(() {
                       final isFav = favCtrl.isFavorite(song.id);
                       return IconButton(
+                        tooltip: isFav
+                            ? strings.text('removeFavorite')
+                            : strings.text('addFavorite'),
                         icon: Icon(
-                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          color: isFav ? AppColors.primary : AppColors.textMuted,
+                          isFav
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: isFav
+                              ? AppColors.primary
+                              : AppColors.textMuted,
                           size: 22,
                         ),
                         onPressed: () => favCtrl.toggleFavorite(song),
@@ -616,9 +707,16 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                     });
                   }
                   return IconButton(
+                    tooltip: song.isFavorite
+                        ? strings.text('removeFavorite')
+                        : strings.text('addFavorite'),
                     icon: Icon(
-                      song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: song.isFavorite ? AppColors.primary : AppColors.textMuted,
+                      song.isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: song.isFavorite
+                          ? AppColors.primary
+                          : AppColors.textMuted,
                       size: 22,
                     ),
                     onPressed: () => playerController.toggleFavorite(song),
@@ -678,6 +776,7 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
     bool isUpcoming = false,
     int? reorderIndex,
   }) {
+    final strings = SoniqLocalizations.of(context);
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -704,7 +803,11 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                       artworkFit: BoxFit.cover,
                       nullArtworkWidget: Container(
                         color: AppColors.surfaceHighlight,
-                        child: const Icon(Icons.music_note_rounded, color: AppColors.textMuted, size: 20),
+                        child: const Icon(
+                          Icons.music_note_rounded,
+                          color: AppColors.textMuted,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -743,20 +846,33 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
 
                 // Item Actions Menu (Move Up, Move Down, Remove, etc.)
                 IconButton(
-                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMuted, size: 20),
-                  onPressed: () => _showQueueItemContextMenu(context, song, absoluteIndex),
+                  tooltip: '${strings.text('moreOptions')}: ${song.title}',
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      _showQueueItemContextMenu(context, song, absoluteIndex),
                 ),
 
                 // Drag Handle
                 if (isUpcoming && reorderIndex != null)
-                  ReorderableDragStartListener(
-                    index: reorderIndex,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: const Icon(
-                        Icons.drag_handle_rounded,
-                        color: AppColors.textSecondary,
-                        size: 22,
+                  Semantics(
+                    button: true,
+                    label: 'Reorder ${song.title}',
+                    hint: 'Drag to change playback order',
+                    child: ReorderableDragStartListener(
+                      index: reorderIndex,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.drag_handle_rounded,
+                          color: AppColors.textSecondary,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ),
@@ -786,7 +902,11 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
               SizedBox(height: 12),
               Text(
                 'No playback history yet',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               SizedBox(height: 4),
               Text(
@@ -809,7 +929,10 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
         return Material(
           color: Colors.transparent,
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 2,
+            ),
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
@@ -822,7 +945,11 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                   artworkFit: BoxFit.cover,
                   nullArtworkWidget: Container(
                     color: AppColors.surfaceHighlight,
-                    child: const Icon(Icons.music_note_rounded, color: AppColors.textMuted, size: 20),
+                    child: const Icon(
+                      Icons.music_note_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
@@ -831,23 +958,40 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
             ),
             subtitle: Text(
               '${song.artist} • ${DurationFormatter.format(song.durationMs)}',
               maxLines: 1,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
             trailing: IconButton(
-              icon: const Icon(Icons.play_circle_outline_rounded, color: AppColors.gold, size: 24),
+              icon: const Icon(
+                Icons.play_circle_outline_rounded,
+                color: AppColors.gold,
+                size: 24,
+              ),
               tooltip: 'Replay Track',
               onPressed: () {
-                playerController.playSong(song, [song, ...playerController.queue]);
+                playerController.playSong(song, [
+                  song,
+                  ...playerController.queue,
+                ]);
                 Navigator.pop(context);
               },
             ),
             onTap: () {
-              playerController.playSong(song, [song, ...playerController.queue]);
+              playerController.playSong(song, [
+                song,
+                ...playerController.queue,
+              ]);
               Navigator.pop(context);
             },
           ),
@@ -860,7 +1004,12 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   // CONTEXT MENU FOR QUEUE ITEM
   // ==========================================
 
-  void _showQueueItemContextMenu(BuildContext context, SongModel song, int absoluteIndex) {
+  void _showQueueItemContextMenu(
+    BuildContext context,
+    SongModel song,
+    int absoluteIndex,
+  ) {
+    final strings = SoniqLocalizations.of(context);
     final fullQueue = playerController.queue;
 
     showModalBottomSheet(
@@ -877,210 +1026,296 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 6),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.borderLight,
-                  borderRadius: BorderRadius.circular(2),
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 6),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              song.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                              ),
                             ),
-                          ),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                          ),
-                        ],
+                            Text(
+                              song.artist,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const Divider(color: AppColors.border, height: 1),
+                const Divider(color: AppColors.border, height: 1),
 
-              // Play Now
-              ListTile(
-                leading: const Icon(Icons.play_arrow_rounded, color: AppColors.gold),
-                title: const Text('Play Now', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  playerController.audioHandler.skipToQueueItem(absoluteIndex);
-                },
-              ),
-
-              // Play Next
-              ListTile(
-                leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.primary),
-                title: const Text('Play Next', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  playerController.playNext(song);
-                  Get.snackbar('Play Next', '${song.title} will play next.');
-                },
-              ),
-
-              // Add to Queue
-              ListTile(
-                leading: const Icon(Icons.queue_music_rounded, color: AppColors.secondary),
-                title: const Text('Add to Queue', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  playerController.addToQueue(song);
-                  Get.snackbar('Added to Queue', '${song.title} added to the end of queue.');
-                },
-              ),
-
-              // Move Up (Accessible reorder alternative)
-              if (absoluteIndex > 0)
+                // Play Now
                 ListTile(
-                  leading: const Icon(Icons.arrow_upward_rounded, color: Colors.white),
-                  title: const Text('Move Up', style: TextStyle(color: Colors.white)),
+                  leading: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.gold,
+                  ),
+                  title: Text(
+                    strings.text('playNow'),
+                    style: TextStyle(color: Colors.white),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    playerController.moveQueueItem(absoluteIndex, true);
+                    playerController.audioHandler.skipToQueueItem(
+                      absoluteIndex,
+                    );
                   },
                 ),
 
-              // Move Down (Accessible reorder alternative)
-              if (absoluteIndex < fullQueue.length - 1)
+                // Play Next
                 ListTile(
-                  leading: const Icon(Icons.arrow_downward_rounded, color: Colors.white),
-                  title: const Text('Move Down', style: TextStyle(color: Colors.white)),
+                  leading: const Icon(
+                    Icons.play_circle_outline_rounded,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    strings.text('playNext'),
+                    style: TextStyle(color: Colors.white),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    playerController.moveQueueItem(absoluteIndex, false);
+                    playerController.playNext(song);
+                    Get.snackbar('Play Next', '${song.title} will play next.');
                   },
                 ),
 
-              // Add to Playlist
-              ListTile(
-                leading: const Icon(Icons.playlist_add_rounded, color: AppColors.gold),
-                title: const Text('Add to Playlist', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showAddToPlaylistSheet(context, song);
-                },
-              ),
+                // Add to Queue
+                ListTile(
+                  leading: const Icon(
+                    Icons.queue_music_rounded,
+                    color: AppColors.secondary,
+                  ),
+                  title: Text(
+                    strings.text('addToQueue'),
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    playerController.addToQueue(song);
+                    Get.snackbar(
+                      'Added to Queue',
+                      '${song.title} added to the end of queue.',
+                    );
+                  },
+                ),
 
-              // Favorite Toggle in Queue Context Menu
-              Builder(
-                builder: (context) {
-                  final favCtrl = Get.isRegistered<FavoritesController>()
-                      ? Get.find<FavoritesController>()
-                      : null;
-                  if (favCtrl != null) {
-                    return Obx(() {
-                      final isFav = favCtrl.isFavorite(song.id);
-                      return ListTile(
-                        leading: Icon(
-                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          color: isFav ? AppColors.primary : AppColors.textPrimary,
-                        ),
-                        title: Text(
-                          isFav ? 'Remove from Favorites' : 'Add to Favorites',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          favCtrl.toggleFavorite(song);
-                        },
-                      );
-                    });
-                  }
-                  return ListTile(
-                    leading: Icon(
-                      song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: song.isFavorite ? AppColors.primary : AppColors.textPrimary,
+                // Move Up (Accessible reorder alternative)
+                if (absoluteIndex > 0)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Colors.white,
                     ),
                     title: Text(
-                      song.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
-                      style: const TextStyle(color: Colors.white),
+                      strings.text('moveUp'),
+                      style: TextStyle(color: Colors.white),
                     ),
                     onTap: () {
                       Navigator.pop(ctx);
-                      playerController.toggleFavorite(song);
+                      playerController.moveQueueItem(absoluteIndex, true);
                     },
-                  );
-                },
-              ),
+                  ),
 
-              // Remove from Queue with Undo
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.red),
-                title: const Text('Remove from Queue', style: TextStyle(color: AppColors.red)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  final removed = playerController.removeFromQueue(absoluteIndex);
-                  if (removed != null) {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: const Color(0xFF1E202B),
-                        duration: const Duration(seconds: 4),
-                        content: Text(
-                          'Removed "${removed.title}"',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                        ),
-                        action: SnackBarAction(
-                          label: 'UNDO',
-                          textColor: AppColors.gold,
-                          onPressed: () {
-                            playerController.undoRemove(absoluteIndex, removed);
+                // Move Down (Accessible reorder alternative)
+                if (absoluteIndex < fullQueue.length - 1)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.arrow_downward_rounded,
+                      color: Colors.white,
+                    ),
+                    title: Text(
+                      strings.text('moveDown'),
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      playerController.moveQueueItem(absoluteIndex, false);
+                    },
+                  ),
+
+                // Add to Playlist
+                ListTile(
+                  leading: const Icon(
+                    Icons.playlist_add_rounded,
+                    color: AppColors.gold,
+                  ),
+                  title: Text(
+                    strings.text('addToPlaylist'),
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showAddToPlaylistSheet(context, song);
+                  },
+                ),
+
+                // Favorite Toggle in Queue Context Menu
+                Builder(
+                  builder: (context) {
+                    final favCtrl = Get.isRegistered<FavoritesController>()
+                        ? Get.find<FavoritesController>()
+                        : null;
+                    if (favCtrl != null) {
+                      return Obx(() {
+                        final isFav = favCtrl.isFavorite(song.id);
+                        return ListTile(
+                          leading: Icon(
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFav
+                                ? AppColors.primary
+                                : AppColors.textPrimary,
+                          ),
+                          title: Text(
+                            isFav
+                                ? 'Remove from Favorites'
+                                : 'Add to Favorites',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            favCtrl.toggleFavorite(song);
                           },
-                        ),
+                        );
+                      });
+                    }
+                    return ListTile(
+                      leading: Icon(
+                        song.isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: song.isFavorite
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
                       ),
+                      title: Text(
+                        song.isFavorite
+                            ? 'Remove from Favorites'
+                            : 'Add to Favorites',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        playerController.toggleFavorite(song);
+                      },
                     );
-                  }
-                },
-              ),
+                  },
+                ),
 
-              // Audio Quality Sheet
-              ListTile(
-                leading: const Icon(Icons.info_outline_rounded, color: AppColors.textMuted),
-                title: const Text('Song Information', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  AudioQualitySheet.show(context, song);
-                },
-              ),
+                // Remove from Queue with Undo
+                ListTile(
+                  leading: const Icon(
+                    Icons.remove_circle_outline_rounded,
+                    color: AppColors.red,
+                  ),
+                  title: Text(
+                    strings.text('removeFromQueue'),
+                    style: TextStyle(color: AppColors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final removed = playerController.removeFromQueue(
+                      absoluteIndex,
+                    );
+                    if (removed != null) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF1E202B),
+                          duration: const Duration(seconds: 4),
+                          content: Text(
+                            'Removed "${removed.title}"',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          action: SnackBarAction(
+                            label: 'UNDO',
+                            textColor: AppColors.gold,
+                            onPressed: () {
+                              playerController.undoRemove(
+                                absoluteIndex,
+                                removed,
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
 
-              // Song Radio / Similar Songs
-              ListTile(
-                leading: const Icon(Icons.radio_rounded, color: AppColors.gold),
-                title: const Text('Song Radio / Similar Songs', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  SimilarSongsSheet.show(context, song);
-                },
-              ),
-            ],
+                // Audio Quality Sheet
+                ListTile(
+                  leading: const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                  title: Text(
+                    strings.text('songInformation'),
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    AudioQualitySheet.show(context, song);
+                  },
+                ),
+
+                // Song Radio / Similar Songs
+                ListTile(
+                  leading: const Icon(
+                    Icons.radio_rounded,
+                    color: AppColors.gold,
+                  ),
+                  title: Text(
+                    strings.text('songRadioSimilar'),
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    SimilarSongsSheet.show(context, song);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _showAddToPlaylistSheet(BuildContext context, SongModel song) {
+    final strings = SoniqLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceElevated,
@@ -1091,9 +1326,12 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Add to Playlist', style: AppTypography.headlineSmall),
+              child: Text(
+                strings.text('addToPlaylist'),
+                style: AppTypography.headlineSmall,
+              ),
             ),
             if (playlistController.playlists.isEmpty)
               const Padding(
@@ -1106,13 +1344,31 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
             else
               ...playlistController.playlists.map(
                 (pl) => ListTile(
-                  leading: const Icon(Icons.queue_music_rounded, color: AppColors.secondary),
-                  title: Text(pl.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                  subtitle: Text('${pl.songCount} tracks', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  leading: const Icon(
+                    Icons.queue_music_rounded,
+                    color: AppColors.secondary,
+                  ),
+                  title: Text(
+                    pl.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${pl.songCount} tracks',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
                   onTap: () {
                     playlistController.addSongToPlaylist(pl.id, song);
                     Navigator.pop(context);
-                    Get.snackbar('Added to Playlist', 'Added "${song.title}" to ${pl.name}.');
+                    Get.snackbar(
+                      'Added to Playlist',
+                      'Added "${song.title}" to ${pl.name}.',
+                    );
                   },
                 ),
               ),
@@ -1127,20 +1383,27 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   // ==========================================
 
   void _confirmClearQueue(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E202B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Clear Upcoming Queue?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-        content: const Text(
-          'This will remove all upcoming tracks from the queue. The currently playing track will continue playing.',
+        title: Text(
+          strings.text('clearQueueTitle'),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          strings.text('clearQueueDescription'),
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -1170,7 +1433,13 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                 );
               }
             },
-            child: const Text('Clear', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w800)),
+            child: Text(
+              strings.text('clearQueue'),
+              style: TextStyle(
+                color: AppColors.red,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -1182,8 +1451,10 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
   // ==========================================
 
   void _showSaveQueueDialog(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     final textController = TextEditingController(
-      text: 'Queue ${DateTime.now().month}/${DateTime.now().day}',
+      text:
+          '${strings.text('queue')} ${DateFormat.Md(strings.locale.toString()).format(DateTime.now())}',
     );
 
     showDialog(
@@ -1191,14 +1462,17 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E202B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Save Queue as Playlist', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text(
+          strings.text('saveAsPlaylist'),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Enter playlist name:',
+              Text(
+                strings.text('enterPlaylistName'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 8),
@@ -1206,46 +1480,75 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                 controller: textController,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Enter playlist name...',
+                decoration: InputDecoration(
+                  hintText: strings.text('playlistName'),
                   hintStyle: TextStyle(color: AppColors.textMuted),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.gold)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.gold, width: 2)),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold, width: 2),
+                  ),
                 ),
               ),
               if (playlistController.playlists.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 const Divider(color: AppColors.border, height: 1),
                 const SizedBox(height: 8),
-                const Text(
-                  'Or append to existing playlist:',
-                  style: TextStyle(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w700),
+                Text(
+                  strings.text('appendExistingPlaylist'),
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 120),
                   child: SingleChildScrollView(
                     child: Column(
-                      children: playlistController.playlists.map((pl) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.playlist_add_rounded, color: AppColors.secondary, size: 20),
-                        title: Text(pl.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                        subtitle: Text('${pl.songCount} tracks', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                        onTap: () async {
-                          Navigator.pop(ctx);
-                          final success = await playerController.appendQueueToPlaylist(pl.id);
-                          if (success) {
-                            playlistController.loadPlaylists();
-                            Get.snackbar(
-                              'Playlist Updated',
-                              'Queue tracks appended to "${pl.name}".',
-                              backgroundColor: AppColors.surfaceElevated,
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                      )).toList(),
+                      children: playlistController.playlists
+                          .map(
+                            (pl) => ListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(
+                                Icons.playlist_add_rounded,
+                                color: AppColors.secondary,
+                                size: 20,
+                              ),
+                              title: Text(
+                                pl.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${pl.songCount} tracks',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              onTap: () async {
+                                Navigator.pop(ctx);
+                                final success = await playerController
+                                    .appendQueueToPlaylist(pl.id);
+                                if (success) {
+                                  playlistController.loadPlaylists();
+                                  Get.snackbar(
+                                    'Playlist Updated',
+                                    'Queue tracks appended to "${pl.name}".',
+                                    backgroundColor: AppColors.surfaceElevated,
+                                    colorText: Colors.white,
+                                  );
+                                }
+                              },
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                 ),
@@ -1256,14 +1559,19 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () async {
               final name = textController.text.trim();
               if (name.isNotEmpty) {
                 Navigator.pop(ctx);
-                final success = await playerController.saveQueueAsPlaylist(name);
+                final success = await playerController.saveQueueAsPlaylist(
+                  name,
+                );
                 if (success) {
                   playlistController.loadPlaylists();
                   Get.snackbar(
@@ -1275,7 +1583,13 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                 }
               }
             },
-            child: const Text('Save', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.w800)),
+            child: Text(
+              strings.text('save'),
+              style: TextStyle(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -1297,7 +1611,8 @@ class _BouncingBar extends StatefulWidget {
   State<_BouncingBar> createState() => _BouncingBarState();
 }
 
-class _BouncingBarState extends State<_BouncingBar> with SingleTickerProviderStateMixin {
+class _BouncingBarState extends State<_BouncingBar>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
   late final Animation<double> _animation;
 

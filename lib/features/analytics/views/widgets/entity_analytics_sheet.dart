@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/models/playback_event_model.dart';
@@ -66,16 +67,22 @@ class EntityAnalyticsSheet extends StatelessWidget {
       if (e.completionPercentage >= 0.90) completedPlays++;
       if (e.isSkipped) skippedPlays++;
       uniqueSongs.add(e.songId);
-      if (firstPlayed == 0 || e.startTimeMs < firstPlayed) firstPlayed = e.startTimeMs;
+      if (firstPlayed == 0 || e.startTimeMs < firstPlayed) {
+        firstPlayed = e.startTimeMs;
+      }
       if (e.startTimeMs > lastPlayed) lastPlayed = e.startTimeMs;
     }
 
     final totalEvents = matchedEvents.length;
-    final completionRate = totalEvents > 0 ? (completedPlays / totalEvents) : 0.0;
+    final completionRate = totalEvents > 0
+        ? (completedPlays / totalEvents)
+        : 0.0;
     final skipRate = totalEvents > 0 ? (skippedPlays / totalEvents) : 0.0;
 
     final minutes = totalListeningMs ~/ 60000;
-    final hoursFormatted = minutes >= 60 ? '${(minutes / 60.0).toStringAsFixed(1)} hrs' : '$minutes mins';
+    final hoursFormatted = minutes >= 60
+        ? '${(minutes / 60.0).toStringAsFixed(1)} hrs'
+        : '$minutes mins';
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.70,
@@ -112,7 +119,9 @@ class EntityAnalyticsSheet extends StatelessWidget {
                   child: Icon(
                     entityType == 'Song'
                         ? Icons.music_note_rounded
-                        : (entityType == 'Artist' ? Icons.person_rounded : Icons.album_rounded),
+                        : (entityType == 'Artist'
+                              ? Icons.person_rounded
+                              : Icons.album_rounded),
                     color: AppColors.gold,
                     size: 24,
                   ),
@@ -122,7 +131,12 @@ class EntityAnalyticsSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$entityType Analytics', style: AppTypography.bodySmall.copyWith(color: AppColors.gold)),
+                      Text(
+                        '$entityType Analytics',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.gold,
+                        ),
+                      ),
                       Text(
                         title,
                         maxLines: 1,
@@ -133,13 +147,19 @@ class EntityAnalyticsSheet extends StatelessWidget {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppColors.textMuted,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -155,17 +175,37 @@ class EntityAnalyticsSheet extends StatelessWidget {
                 // Top Stat Grid
                 Row(
                   children: [
-                    _buildStatCard('Total Plays', '$totalPlays', Icons.play_arrow_rounded, AppColors.gold),
+                    _buildStatCard(
+                      'Total Plays',
+                      NumberFormat.decimalPattern().format(totalPlays),
+                      Icons.play_arrow_rounded,
+                      AppColors.gold,
+                    ),
                     const SizedBox(width: 12),
-                    _buildStatCard('Listening Time', hoursFormatted, Icons.timer_rounded, AppColors.primary),
+                    _buildStatCard(
+                      'Listening Time',
+                      hoursFormatted,
+                      Icons.timer_rounded,
+                      AppColors.primary,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildStatCard('Completion Rate', '${(completionRate * 100).round()}%', Icons.check_circle_rounded, const Color(0xFF00E676)),
+                    _buildStatCard(
+                      'Completion Rate',
+                      '${NumberFormat.decimalPattern().format((completionRate * 100).round())}%',
+                      Icons.check_circle_rounded,
+                      const Color(0xFF00E676),
+                    ),
                     const SizedBox(width: 12),
-                    _buildStatCard('Skip Rate', '${(skipRate * 100).round()}%', Icons.skip_next_rounded, const Color(0xFFFF5252)),
+                    _buildStatCard(
+                      'Skip Rate',
+                      '${NumberFormat.decimalPattern().format((skipRate * 100).round())}%',
+                      Icons.skip_next_rounded,
+                      const Color(0xFFFF5252),
+                    ),
                   ],
                 ),
 
@@ -183,20 +223,30 @@ class EntityAnalyticsSheet extends StatelessWidget {
                     children: [
                       _buildDetailRow(
                         'First Played',
-                        firstPlayed > 0 ? DateFormat('MMM d, yyyy • h:mm a').format(DateTime.fromMillisecondsSinceEpoch(firstPlayed)) : 'Never',
+                        firstPlayed > 0
+                            ? DateFormat('MMM d, yyyy • h:mm a').format(
+                                DateTime.fromMillisecondsSinceEpoch(
+                                  firstPlayed,
+                                ),
+                              )
+                            : 'Never',
                         Icons.history_rounded,
                       ),
                       const Divider(color: AppColors.border, height: 20),
                       _buildDetailRow(
                         'Last Played',
-                        lastPlayed > 0 ? DateFormat('MMM d, yyyy • h:mm a').format(DateTime.fromMillisecondsSinceEpoch(lastPlayed)) : 'Never',
+                        lastPlayed > 0
+                            ? DateFormat('MMM d, yyyy • h:mm a').format(
+                                DateTime.fromMillisecondsSinceEpoch(lastPlayed),
+                              )
+                            : 'Never',
                         Icons.access_time_rounded,
                       ),
                       if (entityType != 'Song') ...[
                         const Divider(color: AppColors.border, height: 20),
                         _buildDetailRow(
                           'Unique Songs Played',
-                          '${uniqueSongs.length} tracks',
+                          '${NumberFormat.decimalPattern().format(uniqueSongs.length)} tracks',
                           Icons.queue_music_rounded,
                         ),
                       ],
@@ -209,7 +259,11 @@ class EntityAnalyticsSheet extends StatelessWidget {
                 // Recent Events Log
                 const Text(
                   'Recent Listening Events',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 10),
 
@@ -219,19 +273,27 @@ class EntityAnalyticsSheet extends StatelessWidget {
                     child: Center(
                       child: Text(
                         'No listening events recorded yet',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   )
                 else
                   ...matchedEvents.reversed.take(5).map((e) {
-                    final d = DateTime.fromMillisecondsSinceEpoch(e.startTimeMs);
+                    final d = DateTime.fromMillisecondsSinceEpoch(
+                      e.startTimeMs,
+                    );
                     final mins = e.listenedDurationMs ~/ 60000;
                     final secs = (e.listenedDurationMs % 60000) ~/ 1000;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF191724),
                         borderRadius: BorderRadius.circular(12),
@@ -239,8 +301,12 @@ class EntityAnalyticsSheet extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            e.isQualifiedPlay ? Icons.verified_rounded : Icons.fiber_manual_record_rounded,
-                            color: e.isQualifiedPlay ? AppColors.gold : AppColors.textMuted,
+                            e.isQualifiedPlay
+                                ? Icons.verified_rounded
+                                : Icons.fiber_manual_record_rounded,
+                            color: e.isQualifiedPlay
+                                ? AppColors.gold
+                                : AppColors.textMuted,
                             size: 16,
                           ),
                           const SizedBox(width: 10),
@@ -250,18 +316,29 @@ class EntityAnalyticsSheet extends StatelessWidget {
                               children: [
                                 Text(
                                   DateFormat('MMM d, h:mm a').format(d),
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                                 Text(
                                   'Source: ${e.playbackSource} • ${e.isSkipped ? 'Skipped' : 'Completed'}',
-                                  style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 10,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                           Text(
                             '${mins}m ${secs}s',
-                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
@@ -275,7 +352,12 @@ class EntityAnalyticsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -296,7 +378,11 @@ class EntityAnalyticsSheet extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -304,7 +390,11 @@ class EntityAnalyticsSheet extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               value,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -317,9 +407,19 @@ class EntityAnalyticsSheet extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.textMuted, size: 18),
         const SizedBox(width: 12),
-        Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
         const Spacer(),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }

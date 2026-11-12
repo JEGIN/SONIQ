@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/playlist_model.dart';
@@ -18,6 +20,7 @@ class PlaylistDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final playlistController = Get.find<PlaylistController>();
     final playerController = Get.find<AudioPlayerController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -26,7 +29,7 @@ class PlaylistDetailView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.queue_music_rounded),
-            tooltip: 'Add Playlist to Queue',
+            tooltip: strings.text('addPlaylistToQueue'),
             onPressed: () {
               final currentPl = playlistController.playlists.firstWhere(
                 (p) => p.id == playlist.id,
@@ -46,10 +49,15 @@ class PlaylistDetailView extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.edit_rounded),
+            tooltip: strings.text('renamePlaylist'),
             onPressed: () => _showRenameDialog(context, playlistController),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: AppColors.red,
+            ),
+            tooltip: strings.text('delete'),
             onPressed: () => _confirmDelete(context, playlistController),
           ),
         ],
@@ -64,10 +72,10 @@ class PlaylistDetailView extends StatelessWidget {
           final songs = playlistController.getSongsForPlaylist(currentPl);
 
           if (songs.isEmpty) {
-            return const SoniqEmptyState(
+            return SoniqEmptyState(
               icon: Icons.queue_music_rounded,
-              title: 'Empty Playlist',
-              description: 'Add songs from your music library by tapping the 3-dots icon on any track.',
+              title: strings.text('emptyPlaylist'),
+              description: strings.text('emptyPlaylistHelp'),
             );
           }
 
@@ -75,23 +83,38 @@ class PlaylistDetailView extends StatelessWidget {
             children: [
               // Header with Play & Shuffle Buttons
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: SoniqButton(
-                        text: 'Play All (${songs.length})',
-                        icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
-                        onPressed: () => playlistController.playEntirePlaylist(currentPl, shuffle: false),
+                        text: '${strings.text('playAll')} (${songs.length})',
+                        icon: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => playlistController.playEntirePlaylist(
+                          currentPl,
+                          shuffle: false,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: SoniqButton(
-                        text: 'Shuffle',
+                        text: strings.text('shuffle'),
                         variant: SoniqButtonVariant.secondary,
-                        icon: const Icon(Icons.shuffle_rounded, color: AppColors.primary),
-                        onPressed: () => playlistController.playEntirePlaylist(currentPl, shuffle: true),
+                        icon: const Icon(
+                          Icons.shuffle_rounded,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: () => playlistController.playEntirePlaylist(
+                          currentPl,
+                          shuffle: true,
+                        ),
                       ),
                     ),
                   ],
@@ -105,18 +128,23 @@ class PlaylistDetailView extends StatelessWidget {
                 child: ReorderableListView.builder(
                   itemCount: songs.length,
                   physics: const BouncingScrollPhysics(),
-                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                    return Material(
-                      elevation: 8.0,
-                      color: AppColors.surfaceElevated,
-                      shadowColor: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(14),
-                      child: child,
-                    );
-                  },
+                  proxyDecorator:
+                      (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          elevation: 8.0,
+                          color: AppColors.surfaceElevated,
+                          shadowColor: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(14),
+                          child: child,
+                        );
+                      },
                   // ignore: deprecated_member_use
                   onReorder: (oldIdx, newIdx) {
-                    playlistController.reorderSongs(currentPl.id, oldIdx, newIdx);
+                    playlistController.reorderSongs(
+                      currentPl.id,
+                      oldIdx,
+                      newIdx,
+                    );
                   },
                   itemBuilder: (context, index) {
                     final song = songs[index];
@@ -124,17 +152,24 @@ class PlaylistDetailView extends StatelessWidget {
                       key: ValueKey('${song.id}_$index'),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
+                        alignment: AlignmentDirectional.centerEnd,
+                        padding: const EdgeInsetsDirectional.only(end: 20),
                         color: AppColors.red.withValues(alpha: 0.2),
-                        child: const Icon(Icons.delete_rounded, color: AppColors.red),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: AppColors.red,
+                        ),
                       ),
                       onDismissed: (_) {
-                        playlistController.removeSongFromPlaylist(currentPl.id, song.id);
+                        playlistController.removeSongFromPlaylist(
+                          currentPl.id,
+                          song.id,
+                        );
                       },
                       child: TrackTile(
                         song: song,
-                        isPlaying: playerController.currentSong.value?.id == song.id,
+                        isPlaying:
+                            playerController.currentSong.value?.id == song.id,
                         onTap: () => playerController.playSong(song, songs),
                       ),
                     );
@@ -149,12 +184,16 @@ class PlaylistDetailView extends StatelessWidget {
   }
 
   void _showRenameDialog(BuildContext context, PlaylistController controller) {
+    final strings = SoniqLocalizations.of(context);
     final textController = TextEditingController(text: playlist.name);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Rename Playlist', style: AppTypography.headlineMedium),
+        title: Text(
+          strings.text('renamePlaylist'),
+          style: AppTypography.headlineMedium,
+        ),
         content: TextField(
           controller: textController,
           autofocus: true,
@@ -166,11 +205,20 @@ class PlaylistDetailView extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              strings.text('cancel'),
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text('Save', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: Text(
+              strings.text('save'),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onPressed: () {
               controller.renamePlaylist(playlist.id, textController.text);
               Navigator.pop(context);
@@ -182,19 +230,36 @@ class PlaylistDetailView extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, PlaylistController controller) {
+    final strings = SoniqLocalizations.of(context);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete Playlist?', style: AppTypography.headlineMedium),
-        content: Text('Are you sure you want to delete "${playlist.name}"? This cannot be undone.'),
+        title: Text(
+          strings.text('deletePlaylistTitle'),
+          style: AppTypography.headlineMedium,
+        ),
+        content: Text(
+          strings
+              .text('deletePlaylistConfirm')
+              .replaceAll('{name}', playlist.name),
+        ),
         actions: [
           TextButton(
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              strings.text('cancel'),
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           TextButton(
-            child: const Text('Delete', style: TextStyle(color: AppColors.red, fontWeight: FontWeight.bold)),
+            child: Text(
+              strings.text('delete'),
+              style: const TextStyle(
+                color: AppColors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onPressed: () {
               controller.deletePlaylist(playlist.id);
               Navigator.pop(context); // Close dialog

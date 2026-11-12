@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/equalizer_preset_model.dart';
@@ -16,6 +18,7 @@ class EqualizerView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<EqualizerController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -27,46 +30,71 @@ class EqualizerView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
               child: Row(
                 children: [
-                  const Text('Equalizer', style: AppTypography.displayLarge),
+                  Text(
+                    strings.text('equalizer'),
+                    style: AppTypography.displayLarge,
+                  ),
                   const Spacer(),
 
                   // Preset Button
-                  Obx(() => TextButton.icon(
-                        style: TextButton.styleFrom(
-                          backgroundColor: AppColors.surfaceElevated,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: const BorderSide(color: AppColors.border, width: 0.8),
+                  Obx(
+                    () => TextButton.icon(
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColors.surfaceElevated,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: const BorderSide(
+                            color: AppColors.border,
+                            width: 0.8,
                           ),
                         ),
-                        icon: const Icon(Icons.tune_rounded, color: AppColors.gold, size: 16),
-                        label: Text(
-                          controller.currentPreset.value.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      ),
+                      icon: const Icon(
+                        Icons.tune_rounded,
+                        color: AppColors.gold,
+                        size: 16,
+                      ),
+                      label: Text(
+                        controller.currentPreset.value.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
-                        onPressed: () => PresetSelectorDialog.show(context, controller),
-                      )),
+                      ),
+                      onPressed: () =>
+                          PresetSelectorDialog.show(context, controller),
+                    ),
+                  ),
 
                   const SizedBox(width: 8),
 
                   // Spatial Sound shortcut
                   IconButton(
-                    icon: const Icon(Icons.spatial_audio_rounded, color: AppColors.gold, size: 22),
-                    tooltip: 'Spatial Audio',
+                    icon: const Icon(
+                      Icons.spatial_audio_rounded,
+                      color: AppColors.gold,
+                      size: 22,
+                    ),
+                    tooltip: strings.text('spatialAudio'),
                     onPressed: () => Get.to(() => const SpatialAudioView()),
                   ),
 
                   // Master EQ Switch
-                  Obx(() => Switch(
+                  Obx(
+                    () => Semantics(
+                      label: strings.text('equalizer'),
+                      child: Switch(
                         value: controller.isEqualizerEnabled.value,
                         activeThumbColor: AppColors.gold,
                         onChanged: (val) => controller.toggleEqualizer(val),
-                      )),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -82,21 +110,22 @@ class EqualizerView extends StatelessWidget {
                   child: Row(
                     children: [
                       _buildProfilePill(
-                        label: 'Speaker',
+                        label: strings.text('speaker'),
                         icon: Icons.phone_android_rounded,
                         isSelected: currentProf == 'speaker',
                         onTap: () => controller.switchAudioProfile('speaker'),
                       ),
                       const SizedBox(width: 6),
                       _buildProfilePill(
-                        label: 'Headphones',
+                        label: strings.text('headphones'),
                         icon: Icons.headphones_rounded,
                         isSelected: currentProf == 'headphones',
-                        onTap: () => controller.switchAudioProfile('headphones'),
+                        onTap: () =>
+                            controller.switchAudioProfile('headphones'),
                       ),
                       const SizedBox(width: 6),
                       _buildProfilePill(
-                        label: 'Bluetooth',
+                        label: strings.text('bluetooth'),
                         icon: Icons.bluetooth_audio_rounded,
                         isSelected: currentProf == 'bluetooth',
                         onTap: () => controller.switchAudioProfile('bluetooth'),
@@ -107,7 +136,8 @@ class EqualizerView extends StatelessWidget {
                         icon: Icons.directions_car_rounded,
                         isSelected: currentProf == 'renault_triber',
                         isCar: true,
-                        onTap: () => controller.switchAudioProfile('renault_triber'),
+                        onTap: () =>
+                            controller.switchAudioProfile('renault_triber'),
                       ),
                     ],
                   ),
@@ -118,11 +148,13 @@ class EqualizerView extends StatelessWidget {
             // 3. Real-time Audio Spectrum Visualizer (60fps FFT)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Obx(() => SpectrumVisualizerWidget(
-                    magnitudes: controller.spectrumMagnitudes,
-                    height: 52,
-                    isPlaying: controller.isEqualizerEnabled.value,
-                  )),
+              child: Obx(
+                () => SpectrumVisualizerWidget(
+                  magnitudes: controller.spectrumMagnitudes,
+                  height: 52,
+                  isPlaying: controller.isEqualizerEnabled.value,
+                ),
+              ),
             ),
 
             const SizedBox(height: 6),
@@ -140,18 +172,23 @@ class EqualizerView extends StatelessWidget {
                 child: Row(
                   children: [
                     // Preamp Fader (-6dB to +6dB)
-                    Obx(() => VerticalFader(
-                          value: controller.preamp.value,
-                          min: -6.0,
-                          max: 6.0,
-                          label: 'Preamp',
-                          activeColor: AppColors.primary,
-                          onChanged: (val) => controller.setPreamp(val),
-                        )),
+                    Obx(
+                      () => VerticalFader(
+                        value: controller.preamp.value,
+                        min: -6.0,
+                        max: 6.0,
+                        label: strings.text('preamp'),
+                        activeColor: AppColors.primary,
+                        onChanged: (val) => controller.setPreamp(val),
+                      ),
+                    ),
 
                     // Vertical Separator
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
                       width: 1,
                       color: AppColors.border,
                     ),
@@ -164,13 +201,18 @@ class EqualizerView extends StatelessWidget {
                         child: Row(
                           children: List.generate(10, (index) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                              child: Obx(() => VerticalFader(
-                                    value: controller.gains[index],
-                                    label: EqualizerController.bandLabels[index],
-                                    activeColor: AppColors.gold,
-                                    onChanged: (val) => controller.setBandGain(index, val),
-                                  )),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5.0,
+                              ),
+                              child: Obx(
+                                () => VerticalFader(
+                                  value: controller.gains[index],
+                                  label: EqualizerController.bandLabels[index],
+                                  activeColor: AppColors.gold,
+                                  onChanged: (val) =>
+                                      controller.setBandGain(index, val),
+                                ),
+                              ),
                             );
                           }),
                         ),
@@ -198,34 +240,38 @@ class EqualizerView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       // Bass Boost Rotary Knob
-                      Obx(() => RotaryKnob(
-                            value: controller.bassBoost.value,
-                            label: 'Bass Boost',
-                            valueDisplay: '${(controller.bassBoost.value * 100).toInt()}%',
-                            activeColor: AppColors.primary,
-                            onChanged: (val) => controller.setBassBoost(val),
-                          )),
+                      Obx(
+                        () => RotaryKnob(
+                          value: controller.bassBoost.value,
+                          label: strings.text('bassBoost'),
+                          valueDisplay:
+                              '${(controller.bassBoost.value * 100).toInt()}%',
+                          activeColor: AppColors.primary,
+                          onChanged: (val) => controller.setBassBoost(val),
+                        ),
+                      ),
 
                       // Quick Action Buttons (Limit, Tone, Reset)
                       Column(
                         children: [
                           // Preset button
                           _buildSmallButton(
-                            label: 'Presets',
+                            label: strings.text('presets'),
                             icon: Icons.tune_rounded,
-                            onTap: () => PresetSelectorDialog.show(context, controller),
+                            onTap: () =>
+                                PresetSelectorDialog.show(context, controller),
                           ),
                           const SizedBox(height: 8),
                           // Reset to Flat button
                           _buildSmallButton(
-                            label: 'Reset',
+                            label: strings.text('reset'),
                             icon: Icons.refresh_rounded,
                             onTap: () => controller.resetToFlat(),
                           ),
                           const SizedBox(height: 8),
                           // Spatial Sound button
                           _buildSmallButton(
-                            label: 'Spatial',
+                            label: strings.text('spatialAudio'),
                             icon: Icons.surround_sound_rounded,
                             onTap: () => Get.to(() => const SpatialAudioView()),
                           ),
@@ -238,8 +284,10 @@ class EqualizerView extends StatelessWidget {
                         final norm = ((tr + 12.0) / 24.0).clamp(0.0, 1.0);
                         return RotaryKnob(
                           value: norm,
-                          label: 'Treble',
-                          valueDisplay: tr > 0 ? '+${tr.toStringAsFixed(1)} dB' : '${tr.toStringAsFixed(1)} dB',
+                          label: strings.text('treble'),
+                          valueDisplay: tr > 0
+                              ? '+${tr.toStringAsFixed(1)} dB'
+                              : '${tr.toStringAsFixed(1)} dB',
                           activeColor: AppColors.gold,
                           onChanged: (val) {
                             final db = -12.0 + val * 24.0;
@@ -254,10 +302,27 @@ class EqualizerView extends StatelessWidget {
 
                   // Preset Quick Pills
                   Obx(() {
-                    final isTriber = controller.activeProfile.value == 'renault_triber';
+                    final isTriber =
+                        controller.activeProfile.value == 'renault_triber';
                     final pillNames = isTriber
-                        ? ['Renault Triber Balanced', 'Deep Bass (Road Boost)', 'Vocal Clarity', 'Pop', 'Rock', 'Classical', 'Acoustic']
-                        : ['Flat', 'Pop', 'Rock', 'Classical', 'Hip-Hop', 'Deep Bass', 'Vocal'];
+                        ? [
+                            'Renault Triber Balanced',
+                            'Deep Bass (Road Boost)',
+                            'Vocal Clarity',
+                            'Pop',
+                            'Rock',
+                            'Classical',
+                            'Acoustic',
+                          ]
+                        : [
+                            'Flat',
+                            'Pop',
+                            'Rock',
+                            'Classical',
+                            'Hip-Hop',
+                            'Deep Bass',
+                            'Vocal',
+                          ];
 
                     return SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -267,17 +332,27 @@ class EqualizerView extends StatelessWidget {
                           if (isTriber) ...[
                             // Road Noise Compensation Toggle
                             GestureDetector(
-                              onTap: () => controller.toggleRoadNoiseCompensation(),
+                              onTap: () =>
+                                  controller.toggleRoadNoiseCompensation(),
                               child: Container(
                                 margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: controller.isRoadNoiseCompensationEnabled.value
+                                  color:
+                                      controller
+                                          .isRoadNoiseCompensationEnabled
+                                          .value
                                       ? const Color(0xFF2E2200)
                                       : const Color(0xFF1E202B),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: controller.isRoadNoiseCompensationEnabled.value
+                                    color:
+                                        controller
+                                            .isRoadNoiseCompensationEnabled
+                                            .value
                                         ? AppColors.gold
                                         : AppColors.border,
                                     width: 0.8,
@@ -289,7 +364,10 @@ class EqualizerView extends StatelessWidget {
                                     Icon(
                                       Icons.speed_rounded,
                                       size: 13,
-                                      color: controller.isRoadNoiseCompensationEnabled.value
+                                      color:
+                                          controller
+                                              .isRoadNoiseCompensationEnabled
+                                              .value
                                           ? AppColors.gold
                                           : AppColors.textMuted,
                                     ),
@@ -299,7 +377,10 @@ class EqualizerView extends StatelessWidget {
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        color: controller.isRoadNoiseCompensationEnabled.value
+                                        color:
+                                            controller
+                                                .isRoadNoiseCompensationEnabled
+                                                .value
                                             ? AppColors.gold
                                             : AppColors.textMuted,
                                       ),
@@ -310,7 +391,8 @@ class EqualizerView extends StatelessWidget {
                             ),
                           ],
                           ...pillNames.map((name) {
-                            final isSelected = controller.currentPreset.value.name == name;
+                            final isSelected =
+                                controller.currentPreset.value.name == name;
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: InkWell(
@@ -326,12 +408,19 @@ class EqualizerView extends StatelessWidget {
                                   controller.applyPreset(match);
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 5,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? AppColors.gold : const Color(0xFF1E202B),
+                                    color: isSelected
+                                        ? AppColors.gold
+                                        : const Color(0xFF1E202B),
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: isSelected ? AppColors.gold : AppColors.border,
+                                      color: isSelected
+                                          ? AppColors.gold
+                                          : AppColors.border,
                                       width: 0.8,
                                     ),
                                   ),
@@ -339,8 +428,12 @@ class EqualizerView extends StatelessWidget {
                                     name,
                                     style: TextStyle(
                                       fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                      color: isSelected ? Colors.black : AppColors.textSecondary,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.black
+                                          : AppColors.textSecondary,
                                     ),
                                   ),
                                 ),
@@ -449,7 +542,14 @@ class EqualizerView extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: AppColors.gold),
             const SizedBox(width: 4),
-            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ],
         ),
       ),

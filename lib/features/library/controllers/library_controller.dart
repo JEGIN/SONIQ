@@ -6,6 +6,7 @@ import '../../../core/services/audio_scanner_service.dart';
 import '../../../core/services/permission_service.dart';
 import '../../../core/services/artwork_cache_service.dart';
 import '../../../core/database/song_cache_service.dart';
+import '../../../core/utils/search_normalizer.dart';
 import '../../playlists/controllers/favorites_controller.dart';
 
 enum LibraryFilterTab { songs, artists, albums, folders }
@@ -196,12 +197,12 @@ class LibraryController extends GetxController {
     List<SongModel> list = List.from(allSongs);
 
     // Apply search query
-    final query = searchQuery.value.trim().toLowerCase();
+    final query = SearchNormalizer.normalize(searchQuery.value.trim());
     if (query.isNotEmpty) {
       list = list.where((song) {
-        return song.title.toLowerCase().contains(query) ||
-            song.artist.toLowerCase().contains(query) ||
-            song.album.toLowerCase().contains(query);
+        return SearchNormalizer.normalize(song.title).contains(query) ||
+            SearchNormalizer.normalize(song.artist).contains(query) ||
+            SearchNormalizer.normalize(song.album).contains(query);
       }).toList();
     }
 

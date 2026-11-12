@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 import 'app_typography.dart';
+import 'app_tokens.dart';
 
 class AppTheme {
   AppTheme._();
@@ -10,6 +12,14 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.background,
+      fontFamilyFallback: const [
+        'Noto Sans Tamil',
+        'Noto Sans Devanagari',
+        'Noto Naskh Arabic',
+        'Noto Sans CJK JP',
+        'Noto Sans CJK SC',
+      ],
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       primaryColor: AppColors.primary,
       canvasColor: AppColors.surface,
       cardColor: AppColors.surface,
@@ -35,7 +45,7 @@ class AppTheme {
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTokens.radiusCard),
           side: const BorderSide(color: AppColors.border, width: 1),
         ),
       ),
@@ -53,21 +63,35 @@ class AppTheme {
         unselectedItemColor: AppColors.textMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surfaceElevated,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppTokens.radiusDialog),
           side: const BorderSide(color: AppColors.border, width: 1),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(AppTokens.touchTarget, AppTokens.touchTarget),
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surfaceElevated,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppTokens.radiusSheet),
+          ),
           side: BorderSide(color: AppColors.border, width: 1),
         ),
       ),

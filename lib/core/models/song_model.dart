@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:intl/intl.dart';
+
 class SongModel {
   final String id;
   final String title;
@@ -37,12 +39,12 @@ class SongModel {
     final duration = Duration(milliseconds: durationMs);
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds.remainder(60);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return '${NumberFormat('00').format(minutes)}:${NumberFormat('00').format(seconds)}';
   }
 
   String get formattedSize {
     final mb = sizeBytes / (1024 * 1024);
-    return '${mb.toStringAsFixed(1)} MB';
+    return '${NumberFormat('0.0').format(mb)} MB';
   }
 
   Map<String, dynamic> toMap() {
@@ -67,9 +69,15 @@ class SongModel {
   factory SongModel.fromMap(Map<dynamic, dynamic> map) {
     return SongModel(
       id: map['id']?.toString() ?? '',
-      title: map['title']?.toString().isNotEmpty == true ? map['title'].toString() : 'Unknown Track',
-      artist: map['artist']?.toString().isNotEmpty == true ? map['artist'].toString() : 'Unknown Artist',
-      album: map['album']?.toString().isNotEmpty == true ? map['album'].toString() : 'Unknown Album',
+      title: map['title']?.toString().isNotEmpty == true
+          ? map['title'].toString()
+          : 'Unknown Track',
+      artist: map['artist']?.toString().isNotEmpty == true
+          ? map['artist'].toString()
+          : 'Unknown Artist',
+      album: map['album']?.toString().isNotEmpty == true
+          ? map['album'].toString()
+          : 'Unknown Album',
       durationMs: (map['durationMs'] as num?)?.toInt() ?? 0,
       dataPath: map['dataPath']?.toString() ?? '',
       albumArtUri: map['albumArtUri']?.toString(),
@@ -80,14 +88,17 @@ class SongModel {
       playCount: (map['playCount'] as num?)?.toInt() ?? 0,
       lastPlayedTimestamp: (map['lastPlayedTimestamp'] as num?)?.toInt() ?? 0,
       waveformPeaks: map['waveformPeaks'] != null
-          ? List<double>.from((map['waveformPeaks'] as List).map((e) => (e as num).toDouble()))
+          ? List<double>.from(
+              (map['waveformPeaks'] as List).map((e) => (e as num).toDouble()),
+            )
           : null,
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory SongModel.fromJson(String source) => SongModel.fromMap(json.decode(source));
+  factory SongModel.fromJson(String source) =>
+      SongModel.fromMap(json.decode(source));
 
   SongModel copyWith({
     String? id,

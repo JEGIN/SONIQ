@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../app/theme/app_colors.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../core/widgets/mini_player_widget.dart';
 import '../../home/views/home_view.dart';
 import '../../library/views/library_view.dart';
@@ -23,6 +25,7 @@ class MainNavigationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navController = Get.find<NavigationController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Obx(() {
       final currentIndex = navController.currentTabIndex.value;
@@ -32,10 +35,7 @@ class MainNavigationScreen extends StatelessWidget {
         body: Stack(
           children: [
             // Screen Pages indexed stack
-            IndexedStack(
-              index: currentIndex,
-              children: _screens,
-            ),
+            IndexedStack(index: currentIndex, children: _screens),
 
             // Persistent Mini Player above bottom bar
             const Positioned(
@@ -58,31 +58,61 @@ class MainNavigationScreen extends StatelessWidget {
             indicatorColor: AppColors.primary.withValues(alpha: 0.18),
             selectedIndex: currentIndex,
             onDestinationSelected: (index) => navController.changeTab(index),
-            destinations: const [
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined, color: AppColors.textMuted),
-                selectedIcon: Icon(Icons.home_rounded, color: AppColors.primary),
-                label: 'Home',
+                icon: const Icon(
+                  Icons.home_outlined,
+                  color: AppColors.textMuted,
+                ),
+                selectedIcon: const Icon(
+                  Icons.home_rounded,
+                  color: AppColors.primary,
+                ),
+                label: strings.text('home'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.library_music_outlined, color: AppColors.textMuted),
-                selectedIcon: Icon(Icons.library_music_rounded, color: AppColors.primary),
-                label: 'Library',
+                icon: const Icon(
+                  Icons.library_music_outlined,
+                  color: AppColors.textMuted,
+                ),
+                selectedIcon: const Icon(
+                  Icons.library_music_rounded,
+                  color: AppColors.primary,
+                ),
+                label: strings.text('library'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.tune_outlined, color: AppColors.textMuted),
-                selectedIcon: Icon(Icons.tune_rounded, color: AppColors.gold),
-                label: 'Equalizer',
+                icon: const Icon(
+                  Icons.tune_outlined,
+                  color: AppColors.textMuted,
+                ),
+                selectedIcon: const Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.gold,
+                ),
+                label: strings.text('equalizer'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.queue_music_outlined, color: AppColors.textMuted),
-                selectedIcon: Icon(Icons.queue_music_rounded, color: AppColors.primary),
-                label: 'Playlists',
+                icon: const Icon(
+                  Icons.queue_music_outlined,
+                  color: AppColors.textMuted,
+                ),
+                selectedIcon: const Icon(
+                  Icons.queue_music_rounded,
+                  color: AppColors.primary,
+                ),
+                label: strings.text('playlists'),
               ),
               NavigationDestination(
-                icon: Icon(Icons.graphic_eq_rounded, color: AppColors.textMuted),
-                selectedIcon: Icon(Icons.graphic_eq_rounded, color: AppColors.primary),
-                label: 'Studio',
+                icon: const Icon(
+                  Icons.graphic_eq_rounded,
+                  color: AppColors.textMuted,
+                ),
+                selectedIcon: const Icon(
+                  Icons.graphic_eq_rounded,
+                  color: AppColors.primary,
+                ),
+                label: strings.text('studio'),
               ),
             ],
           ),

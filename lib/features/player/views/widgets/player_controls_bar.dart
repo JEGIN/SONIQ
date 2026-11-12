@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/localization/soniq_localizations.dart';
 
 class PlayerControlsBar extends StatelessWidget {
   final bool isPlaying;
@@ -26,6 +28,7 @@ class PlayerControlsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -33,13 +36,14 @@ class PlayerControlsBar extends StatelessWidget {
         children: [
           // Shuffle
           IconButton(
+            isSelected: isShuffle,
             icon: Icon(
               Icons.shuffle_rounded,
               color: isShuffle ? AppColors.gold : AppColors.textMuted,
               size: 24,
             ),
             onPressed: onToggleShuffle,
-            tooltip: 'Shuffle',
+            tooltip: strings.text('shuffle'),
           ),
 
           // Previous
@@ -50,7 +54,7 @@ class PlayerControlsBar extends StatelessWidget {
               size: 36,
             ),
             onPressed: onPrevious,
-            tooltip: 'Previous',
+            tooltip: strings.text('previous'),
           ),
 
           // Center Glowing Play / Pause (Matches Reference Image 3)
@@ -71,14 +75,21 @@ class PlayerControlsBar extends StatelessWidget {
             ),
             child: Material(
               color: Colors.transparent,
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: onPlayPause,
-                child: Center(
-                  child: Icon(
-                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: AppColors.textDark,
-                    size: 40,
+              child: Semantics(
+                button: true,
+                toggled: isPlaying,
+                label: isPlaying ? strings.text('pause') : strings.text('play'),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onPlayPause,
+                  child: Center(
+                    child: Icon(
+                      isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: AppColors.textDark,
+                      size: 40,
+                    ),
                   ),
                 ),
               ),
@@ -93,14 +104,15 @@ class PlayerControlsBar extends StatelessWidget {
               size: 36,
             ),
             onPressed: onNext,
-            tooltip: 'Next',
+            tooltip: strings.text('next'),
           ),
 
           // Repeat Mode
           IconButton(
             icon: _buildRepeatIcon(),
+            isSelected: loopMode != LoopMode.off,
             onPressed: onCycleRepeat,
-            tooltip: 'Repeat',
+            tooltip: strings.text('repeat'),
           ),
         ],
       ),

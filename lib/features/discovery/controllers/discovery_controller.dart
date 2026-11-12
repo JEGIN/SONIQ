@@ -8,11 +8,21 @@ import '../../../core/services/audio_handler.dart';
 import '../../../core/database/song_cache_service.dart';
 import '../../library/controllers/library_controller.dart';
 import '../../playlists/controllers/playlist_controller.dart';
+import '../../player/controllers/player_controller.dart';
 
 class DiscoveryController extends GetxController {
   final MusicDiscoveryService _discoveryService = MusicDiscoveryService();
   final SongCacheService _cacheService = SongCacheService();
-  final SoniqAudioHandler _audioHandler = Get.find<SoniqAudioHandler>();
+
+  SoniqAudioHandler get _audioHandler {
+    if (Get.isRegistered<SoniqAudioHandler>()) {
+      return Get.find<SoniqAudioHandler>();
+    }
+    if (Get.isRegistered<AudioPlayerController>()) {
+      return Get.find<AudioPlayerController>().audioHandler;
+    }
+    throw StateError('SoniqAudioHandler is not registered');
+  }
 
   final dailyMixes = <RecommendationMix>[].obs;
   final discoverMix = Rxn<RecommendationMix>();
@@ -31,6 +41,12 @@ class DiscoveryController extends GetxController {
     feedback.value = _discoveryService.getFeedback();
     settings.value = _discoveryService.getSettings();
     loadDiscovery();
+
+    if (Get.isRegistered<LibraryController>()) {
+      ever(Get.find<LibraryController>().allSongs, (_) {
+        loadDiscovery();
+      });
+    }
   }
 
   /// Refreshes all recommendation shelves
@@ -41,7 +57,9 @@ class DiscoveryController extends GetxController {
           ? Get.find<LibraryController>()
           : null;
 
-      final library = libraryController?.allSongs ?? _cacheService.getCachedSongs();
+      final library = (libraryController != null && libraryController.allSongs.isNotEmpty)
+          ? List<SongModel>.from(libraryController.allSongs)
+          : _cacheService.getCachedSongs();
       if (library.isEmpty) {
         isLoading.value = false;
         return;

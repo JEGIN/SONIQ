@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/database/song_cache_service.dart';
 import '../../navigation/controllers/navigation_controller.dart';
@@ -25,6 +26,8 @@ class NowPlayingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final playerController = Get.find<AudioPlayerController>();
+    final strings = SoniqLocalizations.of(context);
+    final allowTwoLines = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -74,7 +77,7 @@ class NowPlayingView extends StatelessWidget {
                       onPressed: () => Get.back(),
                     ),
                     Text(
-                      'Now Playing',
+                      strings.text('nowPlaying'),
                       style: AppTypography.headlineSmall.copyWith(
                         color: AppColors.textPrimary,
                         letterSpacing: 0.5,
@@ -89,7 +92,7 @@ class NowPlayingView extends StatelessWidget {
                             color: AppColors.gold,
                             size: 22,
                           ),
-                          tooltip: 'Lyrics',
+                          tooltip: strings.text('lyrics'),
                           onPressed: () {
                             final song = playerController.currentSong.value;
                             if (song != null) LyricsSheet.show(context, song);
@@ -101,7 +104,7 @@ class NowPlayingView extends StatelessWidget {
                             color: AppColors.textPrimary,
                             size: 24,
                           ),
-                          tooltip: 'Queue',
+                          tooltip: strings.text('queue'),
                           onPressed: () => _openQueue(context),
                         ),
                       ],
@@ -116,12 +119,12 @@ class NowPlayingView extends StatelessWidget {
               Obx(() {
                 final song = playerController.currentSong.value;
                 if (song == null) {
-                  return const SizedBox(
+                  return SizedBox(
                     height: 240,
                     child: Center(
                       child: Text(
-                        'No song playing',
-                        style: TextStyle(color: AppColors.textMuted),
+                        strings.text('noSongPlaying'),
+                        style: const TextStyle(color: AppColors.textMuted),
                       ),
                     ),
                   );
@@ -151,122 +154,130 @@ class NowPlayingView extends StatelessWidget {
                   final song = playerController.currentSong.value;
                   if (song == null) return const SizedBox.shrink();
 
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              song.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.displayMedium.copyWith(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              song.artist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            GestureDetector(
-                              onTap: () =>
-                                  AudioQualitySheet.show(context, song),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
+                  final playbackState = playerController.isPlaying.value
+                      ? strings.text('playing')
+                      : strings.text('paused');
+                  return Semantics(
+                    liveRegion: true,
+                    label: '${song.title}, ${song.artist}. $playbackState',
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                song.title,
+                                maxLines: allowTwoLines ? 2 : 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.displayMedium.copyWith(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceElevated,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: AppColors.border,
-                                    width: 0.8,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                song.artist,
+                                maxLines: allowTwoLines ? 2 : 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () =>
+                                    AudioQualitySheet.show(context, song),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceElevated,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColors.border,
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${song.fileExtension.toUpperCase()} • 44.1 kHz • ${song.formattedSize}',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.gold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.info_outline_rounded,
+                                        size: 11,
+                                        color: AppColors.gold,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${song.fileExtension.toUpperCase()} • 44.1 kHz • ${song.formattedSize}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.gold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.info_outline_rounded,
-                                      size: 11,
-                                      color: AppColors.gold,
-                                    ),
-                                  ],
-                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
 
-                      // Favorite Toggle Heart
-                      Builder(
-                        builder: (context) {
-                          final favCtrl =
-                              Get.isRegistered<FavoritesController>()
-                              ? Get.find<FavoritesController>()
-                              : null;
-                          if (favCtrl != null) {
-                            return Obx(() {
-                              final isFav = favCtrl.isFavorite(song.id);
-                              return IconButton(
-                                icon: Icon(
-                                  isFav
-                                      ? Icons.favorite_rounded
-                                      : Icons.favorite_border_rounded,
-                                  color: isFav
-                                      ? AppColors.primary
-                                      : AppColors.textMuted,
-                                  size: 26,
-                                ),
-                                onPressed: () => favCtrl.toggleFavorite(song),
-                              );
-                            });
-                          }
-                          return IconButton(
-                            icon: Icon(
-                              song.isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: song.isFavorite
-                                  ? AppColors.primary
-                                  : AppColors.textMuted,
-                              size: 26,
-                            ),
-                            onPressed: () => playerController.toggleFavorite(),
-                          );
-                        },
-                      ),
-
-                      // More Options
-                      IconButton(
-                        icon: const Icon(
-                          Icons.more_vert_rounded,
-                          color: AppColors.textMuted,
-                          size: 24,
+                        // Favorite Toggle Heart
+                        Builder(
+                          builder: (context) {
+                            final favCtrl =
+                                Get.isRegistered<FavoritesController>()
+                                ? Get.find<FavoritesController>()
+                                : null;
+                            if (favCtrl != null) {
+                              return Obx(() {
+                                final isFav = favCtrl.isFavorite(song.id);
+                                return IconButton(
+                                  icon: Icon(
+                                    isFav
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    color: isFav
+                                        ? AppColors.primary
+                                        : AppColors.textMuted,
+                                    size: 26,
+                                  ),
+                                  onPressed: () => favCtrl.toggleFavorite(song),
+                                );
+                              });
+                            }
+                            return IconButton(
+                              icon: Icon(
+                                song.isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: song.isFavorite
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
+                                size: 26,
+                              ),
+                              onPressed: () =>
+                                  playerController.toggleFavorite(),
+                            );
+                          },
                         ),
-                        onPressed: () => _showTrackOptions(context, song),
-                      ),
-                    ],
+
+                        // More Options
+                        IconButton(
+                          icon: const Icon(
+                            Icons.more_vert_rounded,
+                            color: AppColors.textMuted,
+                            size: 24,
+                          ),
+                          onPressed: () => _showTrackOptions(context, song),
+                        ),
+                      ],
+                    ),
                   );
                 }),
               ),
@@ -585,6 +596,7 @@ class NowPlayingView extends StatelessWidget {
     BuildContext context,
     AudioPlayerController controller,
   ) {
+    final strings = SoniqLocalizations.of(context);
     final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     showModalBottomSheet(
       context: context,
@@ -596,9 +608,12 @@ class NowPlayingView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Playback Speed', style: AppTypography.headlineSmall),
+              child: Text(
+                strings.text('playbackSpeed'),
+                style: AppTypography.headlineSmall,
+              ),
             ),
             ...speeds.map(
               (s) => ListTile(
@@ -618,6 +633,7 @@ class NowPlayingView extends StatelessWidget {
   }
 
   void _showTrackOptions(BuildContext context, dynamic song) {
+    final strings = SoniqLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceElevated,
@@ -630,7 +646,7 @@ class NowPlayingView extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.lyrics_rounded, color: AppColors.gold),
-              title: const Text('Synchronized Lyrics'),
+              title: Text(strings.text('lyrics')),
               onTap: () {
                 Navigator.pop(context);
                 if (song is SongModel) {
@@ -647,7 +663,7 @@ class NowPlayingView extends StatelessWidget {
                 Icons.content_cut_rounded,
                 color: AppColors.primary,
               ),
-              title: const Text('Edit / Cut in Studio'),
+              title: Text(strings.text('editCutStudio')),
               onTap: () {
                 Navigator.pop(context);
                 Get.back();
@@ -659,7 +675,7 @@ class NowPlayingView extends StatelessWidget {
                 Icons.playlist_add_rounded,
                 color: AppColors.textPrimary,
               ),
-              title: const Text('Add to Playlist'),
+              title: Text(strings.text('addToPlaylist')),
               onTap: () {
                 Navigator.pop(context);
               },

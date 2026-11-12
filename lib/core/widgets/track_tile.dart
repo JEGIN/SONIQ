@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:on_audio_query/on_audio_query.dart' hide SongModel;
+
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_typography.dart';
+import '../../app/localization/soniq_localizations.dart';
 import '../../features/library/views/widgets/track_options_bottom_sheet.dart';
 import '../../features/playlists/controllers/favorites_controller.dart';
 import '../models/song_model.dart';
@@ -25,6 +27,8 @@ class TrackTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
+    final allowTwoLines = MediaQuery.textScalerOf(context).scale(14) > 18;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -37,7 +41,7 @@ class TrackTile extends StatelessWidget {
           child: Row(
             children: [
               // Album Artwork
-              _buildArtwork(),
+              _buildArtwork(context),
 
               const SizedBox(width: 14),
 
@@ -49,11 +53,13 @@ class TrackTile extends StatelessWidget {
                   children: [
                     Text(
                       song.title,
-                      maxLines: 1,
+                      maxLines: allowTwoLines ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodyLarge.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isPlaying ? AppColors.primary : AppColors.textPrimary,
+                        color: isPlaying
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -62,7 +68,7 @@ class TrackTile extends StatelessWidget {
                         Flexible(
                           child: Text(
                             song.artist,
-                            maxLines: 1,
+                            maxLines: allowTwoLines ? 2 : 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.bodySmall.copyWith(
                               color: AppColors.textSecondary,
@@ -89,11 +95,17 @@ class TrackTile extends StatelessWidget {
                         if (song.fileExtension.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceElevated,
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: AppColors.border, width: 0.5),
+                              border: Border.all(
+                                color: AppColors.border,
+                                width: 0.5,
+                              ),
                             ),
                             child: Text(
                               song.fileExtension.toUpperCase(),
@@ -132,21 +144,36 @@ class TrackTile extends StatelessWidget {
                     return Obx(() {
                       final isFav = favCtrl.isFavorite(song.id);
                       return IconButton(
+                        tooltip: isFav
+                            ? strings.text('removeFavorite')
+                            : strings.text('addFavorite'),
                         icon: Icon(
-                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          color: isFav ? AppColors.primary : AppColors.textMuted,
+                          isFav
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: isFav
+                              ? AppColors.primary
+                              : AppColors.textMuted,
                           size: 20,
                         ),
-                        onPressed: onFavoriteTap ?? () => favCtrl.toggleFavorite(song),
+                        onPressed:
+                            onFavoriteTap ?? () => favCtrl.toggleFavorite(song),
                         splashRadius: 20,
                       );
                     });
                   }
 
                   return IconButton(
+                    tooltip: song.isFavorite
+                        ? strings.text('removeFavorite')
+                        : strings.text('addFavorite'),
                     icon: Icon(
-                      song.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: song.isFavorite ? AppColors.primary : AppColors.textMuted,
+                      song.isFavorite
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: song.isFavorite
+                          ? AppColors.primary
+                          : AppColors.textMuted,
                       size: 20,
                     ),
                     onPressed: onFavoriteTap,
@@ -157,19 +184,22 @@ class TrackTile extends StatelessWidget {
 
               // 3-dot options menu
               IconButton(
+                tooltip: strings.text('moreOptions'),
                 icon: const Icon(
                   Icons.more_vert_rounded,
                   color: AppColors.textMuted,
                   size: 20,
                 ),
-                onPressed: onMoreTap ?? () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => TrackOptionsBottomSheet(song: song),
-                  );
-                },
+                onPressed:
+                    onMoreTap ??
+                    () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => TrackOptionsBottomSheet(song: song),
+                      );
+                    },
                 splashRadius: 20,
               ),
             ],
@@ -179,28 +209,35 @@ class TrackTile extends StatelessWidget {
     );
   }
 
-  Widget _buildArtwork() {
+  Widget _buildArtwork(BuildContext context) {
     final int? audioId = int.tryParse(song.id);
-    return Container(
-      key: ValueKey('tile_art_${song.id}'),
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border, width: 0.8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: audioId != null
-            ? QueryArtworkWidget(
-                id: audioId,
-                type: ArtworkType.AUDIO,
-                artworkBorder: BorderRadius.circular(12),
-                nullArtworkWidget: _buildFallbackArtwork(),
-                errorBuilder: (_, _, _) => _buildFallbackArtwork(),
-              )
-            : _buildFallbackArtwork(),
+    return Semantics(
+      image: true,
+      label:
+          '${SoniqLocalizations.of(context).text('albumArtwork')}: ${song.album}, ${song.artist}',
+      child: ExcludeSemantics(
+        child: Container(
+          key: ValueKey('tile_art_${song.id}'),
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border, width: 0.8),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: audioId != null
+                ? QueryArtworkWidget(
+                    id: audioId,
+                    type: ArtworkType.AUDIO,
+                    artworkBorder: BorderRadius.circular(12),
+                    nullArtworkWidget: _buildFallbackArtwork(),
+                    errorBuilder: (_, _, _) => _buildFallbackArtwork(),
+                  )
+                : _buildFallbackArtwork(),
+          ),
+        ),
       ),
     );
   }

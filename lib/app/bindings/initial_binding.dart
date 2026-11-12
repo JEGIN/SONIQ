@@ -20,6 +20,7 @@ class InitialBinding extends Bindings {
 
   @override
   void dependencies() {
+    Get.put<SoniqAudioHandler>(audioHandler, permanent: true);
     Get.put<NavigationController>(NavigationController(), permanent: true);
     Get.put<FavoritesController>(FavoritesController(), permanent: true);
     Get.put<AudioPlayerController>(AudioPlayerController(audioHandler: audioHandler), permanent: true);

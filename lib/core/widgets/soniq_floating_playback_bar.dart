@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+
 import '../../app/theme/app_colors.dart';
+import '../../app/localization/soniq_localizations.dart';
 import '../models/song_model.dart';
 import '../../features/player/controllers/player_controller.dart';
 
@@ -26,7 +28,8 @@ class SoniqFloatingPlaybackBar extends StatefulWidget {
   });
 
   @override
-  State<SoniqFloatingPlaybackBar> createState() => _SoniqFloatingPlaybackBarState();
+  State<SoniqFloatingPlaybackBar> createState() =>
+      _SoniqFloatingPlaybackBarState();
 }
 
 class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
@@ -46,8 +49,10 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
   @override
   Widget build(BuildContext context) {
     final playerCtrl = Get.find<AudioPlayerController>();
+    final strings = SoniqLocalizations.of(context);
 
     return Obx(() {
+      final reduceMotion = MediaQuery.of(context).disableAnimations;
       final currentSong = playerCtrl.currentSong.value;
       final isPlaying = playerCtrl.isPlaying.value;
       final hasActiveMiniPlayer = currentSong != null;
@@ -55,28 +60,36 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
       // Calculate bottom distance:
       // If MiniPlayer is visible (height ~70px + vertical margins 12px), float 86px from bottom.
       // If MiniPlayer is absent, float 16px from bottom.
-      final bottomOffset = (hasActiveMiniPlayer ? 86.0 : 16.0) + widget.additionalBottomOffset;
+      final bottomOffset =
+          (hasActiveMiniPlayer ? 86.0 : 16.0) + widget.additionalBottomOffset;
 
       // Determine if current collection is actively playing
-      final isCollectionActive = currentSong != null &&
+      final isCollectionActive =
+          currentSong != null &&
           widget.songs.any((s) => s.id == currentSong.id) &&
           playerCtrl.queue.isNotEmpty &&
           playerCtrl.queue.any((s) => s.id == currentSong.id);
 
       final showControls = widget.isVisible && widget.songs.isNotEmpty;
 
-      return AnimatedPositioned(
-        duration: const Duration(milliseconds: 280),
+      return AnimatedPositionedDirectional(
+        duration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
-        right: 16,
+        end: 16,
         bottom: bottomOffset,
         child: AnimatedScale(
           scale: showControls ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 240),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 240),
           curve: Curves.easeOutBack,
           child: AnimatedOpacity(
             opacity: showControls ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 200),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -84,8 +97,8 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
                 // 1. Shuffle All Secondary Glass Action
                 Semantics(
                   button: true,
-                  label: 'Shuffle ${widget.collectionTitle}',
-                  hint: 'Randomizes and plays all tracks',
+                  label: '${strings.text('shuffle')} ${widget.collectionTitle}',
+                  hint: strings.text('shuffleHint'),
                   child: GestureDetector(
                     onTapDown: (_) => setState(() => _shufflePressed = true),
                     onTapUp: (_) => setState(() => _shufflePressed = false),
@@ -106,10 +119,12 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
                     },
                     child: AnimatedScale(
                       scale: _shufflePressed ? 0.90 : 1.0,
-                      duration: const Duration(milliseconds: 100),
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 100),
                       child: Container(
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: const Color(0xE6161824),
                           shape: BoxShape.circle,
@@ -146,9 +161,10 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
                 Semantics(
                   button: true,
                   label: isCollectionActive && isPlaying
-                      ? 'Pause ${widget.collectionTitle}'
-                      : 'Play ${widget.collectionTitle}',
-                  hint: 'Plays all tracks from the beginning',
+                      ? '${strings.text('pause')} ${widget.collectionTitle}'
+                      : '${strings.text('play')} ${widget.collectionTitle}',
+                  toggled: isCollectionActive && isPlaying,
+                  hint: strings.text('playCollectionHint'),
                   child: GestureDetector(
                     onTapDown: (_) => setState(() => _playPressed = true),
                     onTapUp: (_) => setState(() => _playPressed = false),
@@ -177,7 +193,9 @@ class _SoniqFloatingPlaybackBarState extends State<SoniqFloatingPlaybackBar> {
                     },
                     child: AnimatedScale(
                       scale: _playPressed ? 0.90 : 1.0,
-                      duration: const Duration(milliseconds: 100),
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 100),
                       child: Container(
                         width: 56,
                         height: 56,

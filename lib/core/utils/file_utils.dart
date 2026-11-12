@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:intl/intl.dart';
+
 class FileUtils {
   FileUtils._();
 
@@ -43,6 +45,6 @@ class FileUtils {
       size /= 1024;
       i++;
     }
-    return '${size.toStringAsFixed(1)} ${suffixes[i]}';
+    return '${NumberFormat('0.0').format(size)} ${suffixes[i]}';
   }
 }

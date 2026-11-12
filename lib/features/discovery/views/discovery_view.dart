@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:on_audio_query/on_audio_query.dart' hide SongModel;
+
+import '../../../app/localization/soniq_localizations.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/recommendation_model.dart';
 import '../../../core/utils/duration_formatter.dart';
 import '../../../core/widgets/mini_player_widget.dart';
+import '../../../core/widgets/soniq_empty_state.dart';
+import '../../library/controllers/library_controller.dart';
 import '../controllers/discovery_controller.dart';
 import 'widgets/discovery_settings_dialog.dart';
 import 'widgets/recommendation_feedback_dialog.dart';
@@ -17,6 +21,7 @@ class DiscoveryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = SoniqLocalizations.of(context);
     final discoveryCtrl = Get.isRegistered<DiscoveryController>()
         ? Get.find<DiscoveryController>()
         : Get.put(DiscoveryController());
@@ -26,24 +31,30 @@ class DiscoveryView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Music Intelligence', style: AppTypography.headlineMedium),
+        title: Text(
+          strings.text('musicIntelligence'),
+          style: AppTypography.headlineMedium,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
-            tooltip: 'Regenerate Mixes',
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.textSecondary,
+            ),
+            tooltip: strings.text('regenerateMixes'),
             onPressed: () {
               HapticFeedback.mediumImpact();
               discoveryCtrl.loadDiscovery(force: true);
               Get.snackbar(
-                'Mixes Refreshed',
-                'Generated fresh recommendations from your library.',
+                strings.text('mixesRefreshed'),
+                strings.text('freshRecommendations'),
                 snackPosition: SnackPosition.BOTTOM,
               );
             },
           ),
           IconButton(
             icon: const Icon(Icons.tune_rounded, color: AppColors.gold),
-            tooltip: 'Discovery Settings',
+            tooltip: strings.text('discoverySettings'),
             onPressed: () => DiscoverySettingsDialog.show(context),
           ),
           const SizedBox(width: 8),
@@ -65,6 +76,33 @@ class DiscoveryView extends StatelessWidget {
             final artistRadios = discoveryCtrl.artistRadios;
             final moodMixes = discoveryCtrl.moodMixes;
 
+            final hasContent = dailyMixes.isNotEmpty ||
+                (discoverMix != null && discoverMix.songs.isNotEmpty) ||
+                (forgottenGems != null && forgottenGems.songs.isNotEmpty) ||
+                (becauseMix != null && becauseMix.songs.isNotEmpty) ||
+                artistRadios.isNotEmpty ||
+                moodMixes.isNotEmpty;
+
+            if (!hasContent) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SoniqEmptyState(
+                    icon: Icons.auto_awesome_rounded,
+                    title: strings.text('musicIntelligence'),
+                    description: strings.text('noSongsFound'),
+                    buttonText: strings.text('refresh'),
+                    onButtonPressed: () {
+                      if (Get.isRegistered<LibraryController>()) {
+                        Get.find<LibraryController>().scanLibrary();
+                      }
+                      discoveryCtrl.loadDiscovery(force: true);
+                    },
+                  ),
+                ),
+              );
+            }
+
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
@@ -73,7 +111,7 @@ class DiscoveryView extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                     child: Text(
-                      'Personalized offline recommendations powered by your genuine listening history and local music collection.',
+                      strings.text('personalizedRecommendations'),
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textMuted,
                         height: 1.4,
@@ -86,8 +124,8 @@ class DiscoveryView extends StatelessWidget {
                 if (dailyMixes.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'DAILY MIXES',
-                      subtitle: 'Made for You • Updated daily',
+                      title: strings.text('dailyMixes').toUpperCase(),
+                      subtitle: strings.text('madeForYouUpdatedDaily'),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -100,7 +138,11 @@ class DiscoveryView extends StatelessWidget {
                         itemCount: dailyMixes.length,
                         itemBuilder: (context, index) {
                           final mix = dailyMixes[index];
-                          return _buildDailyMixCard(context, mix, discoveryCtrl);
+                          return _buildDailyMixCard(
+                            context,
+                            mix,
+                            discoveryCtrl,
+                          );
                         },
                       ),
                     ),
@@ -112,9 +154,9 @@ class DiscoveryView extends StatelessWidget {
                 if (becauseMix != null && becauseMix.songs.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'BECAUSE YOU LISTENED TO',
+                      title: strings.text('becauseYouListenedTo').toUpperCase(),
                       subtitle: becauseMix.subtitle,
-                      actionLabel: 'Play All',
+                      actionLabel: strings.text('playAll'),
                       onAction: () => discoveryCtrl.playMix(becauseMix),
                     ),
                   ),
@@ -145,7 +187,12 @@ class DiscoveryView extends StatelessWidget {
                 // 3. DISCOVER MIX (DEEP CUTS HERO BANNER)
                 if (discoverMix != null && discoverMix.songs.isNotEmpty) ...[
                   SliverToBoxAdapter(
-                    child: _buildDiscoverMixHero(context, discoverMix, discoveryCtrl),
+                    child: _buildDiscoverMixHero(
+                      context,
+                      discoverMix,
+                      discoveryCtrl,
+                      strings,
+                    ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ],
@@ -154,8 +201,8 @@ class DiscoveryView extends StatelessWidget {
                 if (artistRadios.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'ARTIST RADIO',
-                      subtitle: 'Continuous stations rooted in your favorite artists',
+                      title: strings.text('artistRadio').toUpperCase(),
+                      subtitle: strings.text('artistRadioDescription'),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -168,7 +215,11 @@ class DiscoveryView extends StatelessWidget {
                         itemCount: artistRadios.length,
                         itemBuilder: (context, index) {
                           final radio = artistRadios[index];
-                          return _buildArtistRadioCard(context, radio, discoveryCtrl);
+                          return _buildArtistRadioCard(
+                            context,
+                            radio,
+                            discoveryCtrl,
+                          );
                         },
                       ),
                     ),
@@ -177,12 +228,13 @@ class DiscoveryView extends StatelessWidget {
                 ],
 
                 // 5. FORGOTTEN GEMS
-                if (forgottenGems != null && forgottenGems.songs.isNotEmpty) ...[
+                if (forgottenGems != null &&
+                    forgottenGems.songs.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'FORGOTTEN GEMS',
-                      subtitle: 'Past favorites you haven\'t played recently',
-                      actionLabel: 'Play All',
+                      title: strings.text('forgottenGems').toUpperCase(),
+                      subtitle: strings.text('forgottenGemsDescription'),
+                      actionLabel: strings.text('playAll'),
                       onAction: () => discoveryCtrl.playMix(forgottenGems),
                     ),
                   ),
@@ -214,34 +266,30 @@ class DiscoveryView extends StatelessWidget {
                 if (moodMixes.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'MOOD STATIONS',
-                      subtitle: 'Music tuned to your activities and energy levels',
+                      title: strings.text('moodStations').toUpperCase(),
+                      subtitle: strings.text('moodStationsDescription'),
                     ),
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.5,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final mix = moodMixes[index];
-                          return _buildMoodMixTile(context, mix, discoveryCtrl);
-                        },
-                        childCount: moodMixes.length,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1.5,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final mix = moodMixes[index];
+                        return _buildMoodMixTile(context, mix, discoveryCtrl);
+                      }, childCount: moodMixes.length),
                     ),
                   ),
                 ],
 
                 // Bottom Padding for persistent Mini Player
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 100),
-                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             );
           }),
@@ -308,7 +356,13 @@ class DiscoveryView extends StatelessWidget {
                 foregroundColor: AppColors.gold,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
-              child: Text(actionLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              child: Text(
+                actionLabel,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
         ],
       ),
@@ -326,7 +380,10 @@ class DiscoveryView extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E202B),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: mix.accentColor.withValues(alpha: 0.35), width: 1.0),
+        border: Border.all(
+          color: mix.accentColor.withValues(alpha: 0.35),
+          width: 1.0,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -353,10 +410,27 @@ class DiscoveryView extends StatelessWidget {
                           type: ArtworkType.AUDIO,
                           artworkFit: BoxFit.cover,
                           nullArtworkWidget: Center(
-                            child: Icon(mix.icon, color: mix.accentColor, size: 36),
+                            child: Icon(
+                              mix.icon,
+                              color: mix.accentColor,
+                              size: 36,
+                            ),
+                          ),
+                          errorBuilder: (_, _, _) => Center(
+                            child: Icon(
+                              mix.icon,
+                              color: mix.accentColor,
+                              size: 36,
+                            ),
                           ),
                         )
-                      : Center(child: Icon(mix.icon, color: mix.accentColor, size: 36)),
+                      : Center(
+                          child: Icon(
+                            mix.icon,
+                            color: mix.accentColor,
+                            size: 36,
+                          ),
+                        ),
                 ),
                 // Gradient overlay
                 Container(
@@ -394,7 +468,11 @@ class DiscoveryView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.play_arrow_rounded, color: Colors.black, size: 24),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        color: Colors.black,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
@@ -411,27 +489,42 @@ class DiscoveryView extends StatelessWidget {
                     mix.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     mix.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Text(
                         '${mix.songCount} tracks',
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const Spacer(),
                       // Save Mix button
                       GestureDetector(
                         onTap: () => discoveryCtrl.saveMixAsPlaylist(mix),
-                        child: const Icon(Icons.playlist_add_rounded, color: AppColors.textMuted, size: 20),
+                        child: const Icon(
+                          Icons.playlist_add_rounded,
+                          color: AppColors.textMuted,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -448,21 +541,22 @@ class DiscoveryView extends StatelessWidget {
     BuildContext context,
     RecommendationMix mix,
     DiscoveryController discoveryCtrl,
+    SoniqLocalizations strings,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xFF381440),
-            const Color(0xFF1B1D28),
-          ],
+          colors: [const Color(0xFF381440), const Color(0xFF1B1D28)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF9C27B0).withValues(alpha: 0.4), width: 1.2),
+        border: Border.all(
+          color: const Color(0xFF9C27B0).withValues(alpha: 0.4),
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.4),
@@ -482,21 +576,43 @@ class DiscoveryView extends StatelessWidget {
                   color: const Color(0xFF9C27B0).withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.explore_rounded, color: Color(0xFFCE93D8), size: 22),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: Color(0xFFCE93D8),
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('DISCOVER MIX', style: TextStyle(color: Color(0xFFCE93D8), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-                    Text('Unexplored tracks in your collection', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                    Text(
+                      strings.text('discoverMix').toUpperCase(),
+                      style: TextStyle(
+                        color: Color(0xFFCE93D8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    Text(
+                      strings.text('unexploredTracks'),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
                   ],
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.playlist_add_rounded, color: AppColors.textSecondary),
-                tooltip: 'Save as Playlist',
+                icon: const Icon(
+                  Icons.playlist_add_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                tooltip: strings.text('saveAsPlaylist'),
                 onPressed: () => discoveryCtrl.saveMixAsPlaylist(mix),
               ),
             ],
@@ -504,25 +620,41 @@ class DiscoveryView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             mix.description,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.3,
+            ),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Text(
                 '${mix.songCount} songs • ${DurationFormatter.format(mix.totalDurationMs)}',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF9C27B0),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text('Play Mix', style: TextStyle(fontWeight: FontWeight.w700)),
+                label: Text(
+                  strings.text('playMix'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 onPressed: () => discoveryCtrl.playMix(mix),
               ),
             ],
@@ -564,7 +696,19 @@ class DiscoveryView extends StatelessWidget {
                       artworkFit: BoxFit.cover,
                       nullArtworkWidget: Container(
                         color: AppColors.surfaceHighlight,
-                        child: const Icon(Icons.music_note_rounded, color: AppColors.gold, size: 28),
+                        child: const Icon(
+                          Icons.music_note_rounded,
+                          color: AppColors.gold,
+                          size: 28,
+                        ),
+                      ),
+                      errorBuilder: (_, _, _) => Container(
+                        color: AppColors.surfaceHighlight,
+                        child: const Icon(
+                          Icons.music_note_rounded,
+                          color: AppColors.gold,
+                          size: 28,
+                        ),
                       ),
                     ),
                     Positioned(
@@ -580,7 +724,11 @@ class DiscoveryView extends StatelessWidget {
                             color: Colors.black.withValues(alpha: 0.6),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 16),
+                          child: const Icon(
+                            Icons.more_vert_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -593,13 +741,20 @@ class DiscoveryView extends StatelessWidget {
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
             Text(
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
@@ -618,7 +773,10 @@ class DiscoveryView extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E202B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: radio.accentColor.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: radio.accentColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -644,12 +802,19 @@ class DiscoveryView extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 '${radio.songCount} tracks',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
@@ -667,7 +832,10 @@ class DiscoveryView extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E202B),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: mix.accentColor.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: mix.accentColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -695,11 +863,18 @@ class DiscoveryView extends StatelessWidget {
                       mix.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                     Text(
                       '${mix.songCount} tracks',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
