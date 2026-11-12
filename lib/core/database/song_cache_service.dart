@@ -341,6 +341,23 @@ class SongCacheService {
     await setSetting('excluded_music_directories', paths.toSet().toList());
   }
 
+  List<String> getCustomDirectories() {
+    final value = getSetting(
+      'custom_music_directories',
+      defaultValue: const <String>[],
+    );
+    if (value is! List) return const [];
+    return value
+        .map((item) => item.toString())
+        .where((path) => path.isNotEmpty)
+        .toList();
+  }
+
+  Future<void> addCustomDirectory(String path) async {
+    final list = getCustomDirectories().toSet()..add(path);
+    await setSetting('custom_music_directories', list.toList());
+  }
+
   bool isPathExcluded(String path) {
     if (path.isEmpty) return false;
     final normalizedPath = path.replaceAll('\\', '/').toLowerCase();

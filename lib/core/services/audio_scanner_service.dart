@@ -29,7 +29,7 @@ class AudioScannerService {
 
     try {
       final hasPermission = await PermissionService.requestMediaPermissions();
-      if (!hasPermission) {
+      if (!hasPermission && Platform.isAndroid) {
         debugPrint(
           'SONIQ: Media permission not granted. Returning cached songs.',
         );
@@ -47,13 +47,14 @@ class AudioScannerService {
       final Set<String> seenPaths = {};
 
       // 1. Query via OnAudioQuery (MediaStore on Android, MPMediaQuery on iOS)
-      try {
-        final queryResult = await _audioQuery.querySongs(
-          sortType: audio_query.SongSortType.TITLE,
-          orderType: audio_query.OrderType.ASC_OR_SMALLER,
-          uriType: audio_query.UriType.EXTERNAL,
-          ignoreCase: true,
-        );
+      if (hasPermission || Platform.isAndroid) {
+        try {
+          final queryResult = await _audioQuery.querySongs(
+            sortType: audio_query.SongSortType.TITLE,
+            orderType: audio_query.OrderType.ASC_OR_SMALLER,
+            uriType: audio_query.UriType.EXTERNAL,
+            ignoreCase: true,
+          );
 
         int totalCount = queryResult.length;
         int processed = 0;
@@ -150,9 +151,10 @@ class AudioScannerService {
           'SONIQ: OnAudioQuery error: $e. Falling back to directory scan.',
         );
       }
+    }
 
-      // 2. Directory Fallback Scanner (for direct files or emulators)
-      if (scannedSongs.isEmpty) {
+      // 2. Directory Fallback Scanner (for direct files, iOS Files app, or emulators)
+      if (scannedSongs.isEmpty || Platform.isIOS) {
         final fallbackSongs = await _scanCommonDirectories(
           existingCache,
           seenPaths,
@@ -194,6 +196,11 @@ class AudioScannerService {
       final appDocDir = await getApplicationDocumentsDirectory();
       searchDirs.add(appDocDir);
 
+      // Include user-configured/imported custom directories
+      for (final customPath in _cacheService.getCustomDirectories()) {
+        searchDirs.add(Directory(customPath));
+      }
+
       for (final dir in searchDirs) {
         if (!await dir.exists()) continue;
         await for (final entity in dir.list(
@@ -226,11 +233,49 @@ class AudioScannerService {
               if (shouldSkip) continue;
             }
 
+            // Extract folder structure (e.g. SONGS/ANIRUTH/song.mp3)
+            final segments = entity.uri.pathSegments
+                .where((s) => s.isNotEmpty)
+                .toList();
+            String detectedArtist = 'Unknown Artist';
+            String detectedAlbum = 'Local Music';
+
+            if (segments.length >= 2) {
+              final parentName = Uri.decodeComponent(
+                segments[segments.length - 2],
+              );
+              if (parentName.isNotEmpty &&
+                  parentName.toLowerCase() != 'soniq' &&
+                  parentName.toLowerCase() != 'documents' &&
+                  parentName.toLowerCase() != 'music') {
+                detectedArtist = parentName;
+              }
+            }
+            if (segments.length >= 3) {
+              final grandParentName = Uri.decodeComponent(
+                segments[segments.length - 3],
+              );
+              if (grandParentName.isNotEmpty &&
+                  grandParentName.toLowerCase() != 'soniq' &&
+                  grandParentName.toLowerCase() != 'documents') {
+                detectedAlbum = grandParentName;
+              } else {
+                detectedAlbum = detectedArtist;
+              }
+            }
+
             final song = SongModel(
               id: id,
               title: fileName,
-              artist: 'Unknown Artist',
-              album: 'Local Music',
+              artist: existing?.artist != null &&
+                      existing!.artist != 'Unknown Artist'
+                  ? existing.artist
+                  : detectedArtist,
+              album: existing?.album != null &&
+                      existing!.album != 'Unknown Album' &&
+                      existing.album != 'Local Music'
+                  ? existing.album
+                  : detectedAlbum,
               durationMs: existing?.durationMs ?? estimatedDurationMs,
               dataPath: entity.path,
               dateAdded: stat.modified.millisecondsSinceEpoch ~/ 1000,

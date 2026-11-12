@@ -1,11 +1,15 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/models/song_model.dart';
 import '../../../core/services/audio_scanner_service.dart';
 import '../../../core/services/permission_service.dart';
 import '../../../core/services/artwork_cache_service.dart';
 import '../../../core/database/song_cache_service.dart';
+import '../../../core/utils/file_utils.dart';
 import '../../../core/utils/search_normalizer.dart';
 import '../../playlists/controllers/favorites_controller.dart';
 
@@ -174,6 +178,100 @@ class LibraryController extends GetxController {
       if (Get.isRegistered<FavoritesController>()) {
         Get.find<FavoritesController>().loadFavorites();
       }
+    } finally {
+      isScanning.value = false;
+    }
+  }
+
+  Future<void> importFolder() async {
+    try {
+      final selectedDirectory = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Select your SONGS or Music folder',
+      );
+      if (selectedDirectory == null || selectedDirectory.isEmpty) return;
+
+      isScanning.value = true;
+      final sourceDir = Directory(selectedDirectory);
+      if (!await sourceDir.exists()) {
+        isScanning.value = false;
+        return;
+      }
+
+      // Copy into app Documents folder so files are permanently accessible in iOS sandbox
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final targetDir = Directory('${appDocDir.path}/Songs');
+      if (!await targetDir.exists()) {
+        await targetDir.create(recursive: true);
+      }
+
+      int count = 0;
+      await for (final entity in sourceDir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entity is File && FileUtils.isSupportedAudioFile(entity.path)) {
+          final relPath = entity.path.substring(sourceDir.path.length);
+          final destFile = File('${targetDir.path}$relPath');
+          await destFile.parent.create(recursive: true);
+          await entity.copy(destFile.path);
+          count++;
+        }
+      }
+
+      // Also remember this directory in customDirectories
+      await cacheService.addCustomDirectory(selectedDirectory);
+
+      await scanLibrary();
+
+      Get.snackbar(
+        'Import Complete',
+        'Successfully imported $count songs to your library.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E202B),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      debugPrint('Error importing folder: $e');
+    } finally {
+      isScanning.value = false;
+    }
+  }
+
+  Future<void> importAudioFiles() async {
+    try {
+      final pickedFiles = await FilePicker.pickFiles(
+        type: FileType.audio,
+      );
+      if (pickedFiles.isEmpty) return;
+
+      isScanning.value = true;
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final targetDir = Directory('${appDocDir.path}/Imported');
+      if (!await targetDir.exists()) {
+        await targetDir.create(recursive: true);
+      }
+
+      int count = 0;
+      for (final file in pickedFiles) {
+        if (file.path != null) {
+          final srcFile = File(file.path!);
+          final destPath = '${targetDir.path}/${file.name}';
+          await srcFile.copy(destPath);
+          count++;
+        }
+      }
+
+      await scanLibrary();
+
+      Get.snackbar(
+        'Import Complete',
+        'Successfully imported $count songs to your library.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1E202B),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      debugPrint('Error importing audio files: $e');
     } finally {
       isScanning.value = false;
     }

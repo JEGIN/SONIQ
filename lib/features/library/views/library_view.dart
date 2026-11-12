@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -90,6 +91,15 @@ class _LibraryViewState extends State<LibraryView> {
                     tooltip: strings.text('sortSongs'),
                     onPressed: () =>
                         LibrarySortBottomSheet.show(context, libraryController),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.folder_open_rounded,
+                      color: AppColors.gold,
+                      size: 24,
+                    ),
+                    tooltip: 'Import from Files',
+                    onPressed: () => libraryController.importFolder(),
                   ),
                   IconButton(
                     icon: const Icon(
@@ -222,9 +232,14 @@ class _LibraryViewState extends State<LibraryView> {
                     if (songs.isEmpty && !libraryController.isScanning.value) {
                       return SoniqEmptyState(
                         title: strings.text('noMusicFound'),
-                        description: strings.text('noAudioFiles'),
+                        description: Platform.isIOS
+                            ? 'Drop audio files in Files app > On My iPad > Soniq, or import your SONGS folder below.'
+                            : strings.text('noAudioFiles'),
                         buttonText: strings.text('scanStorage'),
                         onButtonPressed: () => libraryController.scanLibrary(),
+                        secondaryButtonText: 'Import Folder from Files',
+                        onSecondaryButtonPressed: () =>
+                            libraryController.importFolder(),
                       );
                     }
 

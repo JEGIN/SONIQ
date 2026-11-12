@@ -10,6 +10,8 @@ class SoniqEmptyState extends StatelessWidget {
   final String description;
   final String? buttonText;
   final VoidCallback? onButtonPressed;
+  final String? secondaryButtonText;
+  final VoidCallback? onSecondaryButtonPressed;
   final bool isLoading;
 
   const SoniqEmptyState({
@@ -19,6 +21,8 @@ class SoniqEmptyState extends StatelessWidget {
     required this.description,
     this.buttonText,
     this.onButtonPressed,
+    this.secondaryButtonText,
+    this.onSecondaryButtonPressed,
     this.isLoading = false,
   });
 
@@ -71,6 +75,25 @@ class SoniqEmptyState extends StatelessWidget {
                   onPressed: onButtonPressed,
                   isLoading: isLoading,
                   width: 220,
+                ),
+              ],
+              if (secondaryButtonText != null && onSecondaryButtonPressed != null) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: onSecondaryButtonPressed,
+                  icon: const Icon(Icons.folder_open_rounded, size: 18),
+                  label: Text(
+                    secondaryButtonText!,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.gold,
+                    side: const BorderSide(color: AppColors.gold, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  ),
                 ),
               ],
             ],

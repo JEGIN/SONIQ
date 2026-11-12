@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -41,9 +42,13 @@ class HomeView extends StatelessWidget {
             return SoniqEmptyState(
               icon: Icons.graphic_eq_rounded,
               title: strings.text('welcomeHome'),
-              description: strings.text('homeIntro'),
+              description: Platform.isIOS
+                  ? 'Scan your iPad music, or import your SONGS folder from the Files app.'
+                  : strings.text('homeIntro'),
               buttonText: strings.text('scanAudioLibrary'),
               onButtonPressed: () => libraryController.scanLibrary(),
+              secondaryButtonText: 'Import Folder from Files',
+              onSecondaryButtonPressed: () => libraryController.importFolder(),
             );
           }
 
