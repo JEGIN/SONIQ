@@ -82,21 +82,21 @@ class SettingsView extends StatelessWidget {
             ),
 
             // Library & Audio Stats Card
-            Obx(
-              () => SoniqCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.text('libraryOverview'),
-                      style: AppTypography.headlineSmall,
-                    ),
-                    const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final compact =
-                            constraints.maxWidth < 360 ||
-                            MediaQuery.textScalerOf(context).scale(14) > 18;
+            SoniqCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.text('libraryOverview'),
+                    style: AppTypography.headlineSmall,
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact =
+                          constraints.maxWidth < 360 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 18;
+                      return Obx(() {
                         final stats = [
                           _buildStatItem(
                             strings.text('trackCountLabel'),
@@ -140,10 +140,10 @@ class SettingsView extends StatelessWidget {
                             stats[2],
                           ],
                         );
-                      },
-                    ),
-                  ],
-                ),
+                      });
+                    },
+                  ),
+                ],
               ),
             ),
 
