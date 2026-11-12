@@ -96,10 +96,14 @@ class HomeView extends StatelessWidget {
                                 color: AppColors.textMuted,
                                 letterSpacing: 0.5,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const Text(
                               'SONIQ Music',
                               style: AppTypography.headlineMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -171,7 +175,9 @@ class HomeView extends StatelessWidget {
 
               // 2. Mix Filter Category Pills (Matches Reference Image 4: Song mix, Album mix, Decade mix)
               SliverToBoxAdapter(
-                child: Padding(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   child: Row(
                     children: homeController.mixFilters.map((filter) {
@@ -289,11 +295,15 @@ class HomeView extends StatelessWidget {
                               Text(
                                 strings.text('audioStudioRingtoneMaker'),
                                 style: AppTypography.headlineSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(height: 3),
+                              const SizedBox(height: 3),
                               Text(
                                 strings.text('losslessTrimExport'),
-                                style: TextStyle(
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
                                 ),
@@ -356,10 +366,14 @@ class HomeView extends StatelessWidget {
                               Text(
                                 strings.text('analyticsReplay'),
                                 style: AppTypography.headlineSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(height: 3),
-                              Text(
+                              const SizedBox(height: 3),
+                              const Text(
                                 'Explore personal stats, top tracks, streaks & annual recap',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
@@ -417,17 +431,21 @@ class HomeView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Made for You & Discovery',
+                                strings.text('musicDiscovery'),
                                 style: AppTypography.headlineSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(height: 3),
-                              Text(
+                              const SizedBox(height: 3),
+                              const Text(
                                 'Daily Mixes, Artist Radio, Forgotten Gems & Similar Songs',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 11,
@@ -559,11 +577,16 @@ class HomeView extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              strings.text('favoriteTracks'),
-                              style: AppTypography.headlineMedium,
+                            Expanded(
+                              child: Text(
+                                strings.text('favoriteTracks'),
+                                style: AppTypography.headlineMedium,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            Icon(
+                            const SizedBox(width: 8),
+                            const Icon(
                               Icons.chevron_right_rounded,
                               color: AppColors.primary,
                             ),
@@ -632,9 +655,13 @@ class HomeView extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        strings.text('recentlyAdded'),
-                        style: AppTypography.headlineMedium,
+                      Expanded(
+                        child: Text(
+                          strings.text('recentlyAdded'),
+                          style: AppTypography.headlineMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
