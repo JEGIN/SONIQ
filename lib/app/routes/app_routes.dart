@@ -5,4 +5,5 @@ abstract class Routes {
   static const studio = '/studio';
   static const playlists = '/playlists';
   static const carMode = '/car-mode';
+  static const discovery = '/discovery';
 }

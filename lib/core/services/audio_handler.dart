@@ -12,6 +12,7 @@ import '../database/song_cache_service.dart';
 import 'artwork_cache_service.dart';
 import 'audio_dsp_service.dart';
 import 'playback_tracker_service.dart';
+import 'music_discovery_service.dart';
 
 Future<SoniqAudioHandler> initAudioHandler() async {
   return await AudioService.init(
@@ -1490,9 +1491,49 @@ class SoniqAudioHandler extends BaseAudioHandler {
             'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 2,
           },
         ),
+        MediaItem(
+          id: 'category_discovery',
+          title: 'Made for You & Discovery',
+          displaySubtitle: 'Personalized Daily Mixes & Radio',
+          artUri: fallbackArt,
+          playable: false,
+          extras: const {
+            'android.media.browse.CONTENT_STYLE_BROWSABLE_HINT': 2,
+            'android.auto.media.CONTENT_STYLE_BROWSABLE_HINT': 2,
+          },
+        ),
       ]);
 
       return categories;
+    }
+
+    // Discovery Mixes Container
+    if (parentMediaId == 'category_discovery') {
+      final discoveryService = MusicDiscoveryService();
+      final dailyMixes = discoveryService.generateDailyMixes(cachedSongs, mixesCount: 3);
+      final items = <MediaItem>[];
+      for (final mix in dailyMixes) {
+        items.add(
+          MediaItem(
+            id: 'discovery_mix_${mix.id}',
+            title: mix.title,
+            displaySubtitle: '${mix.songCount} songs • ${mix.subtitle}',
+            playable: true,
+          ),
+        );
+      }
+      final fg = discoveryService.generateForgottenGems(cachedSongs);
+      if (fg.songs.isNotEmpty) {
+        items.add(
+          MediaItem(
+            id: 'discovery_mix_${fg.id}',
+            title: fg.title,
+            displaySubtitle: '${fg.songCount} songs • Rediscover favorites',
+            playable: true,
+          ),
+        );
+      }
+      return items;
     }
 
     // 2. Current Queue
@@ -1937,6 +1978,24 @@ class SoniqAudioHandler extends BaseAudioHandler {
     if (cachedSongs.isEmpty) return;
 
     // A. Direct Play All / Shuffle All Container Actions
+    if (mediaId.startsWith('discovery_mix_')) {
+      final discoveryService = MusicDiscoveryService();
+      final mixId = mediaId.replaceFirst('discovery_mix_', '');
+      final allMixes = [
+        ...discoveryService.generateDailyMixes(cachedSongs, mixesCount: 4),
+        discoveryService.generateDiscoverMix(cachedSongs),
+        discoveryService.generateForgottenGems(cachedSongs),
+      ];
+      final targetMix = allMixes.firstWhere(
+        (m) => m.id == mixId,
+        orElse: () => allMixes.first,
+      );
+      if (targetMix.songs.isNotEmpty) {
+        await playSongList(targetMix.songs, 0, shuffle: false);
+      }
+      return;
+    }
+
     if (mediaId == 'action_play_all_songs' || mediaId == 'category_all_songs') {
       await playSongList(cachedSongs, 0, shuffle: false);
       return;

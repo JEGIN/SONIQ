@@ -3,6 +3,7 @@ import '../../features/navigation/views/main_navigation_screen.dart';
 import '../../features/player/views/now_playing_view.dart';
 import '../../features/audio_studio/views/audio_studio_view.dart';
 import '../../features/car_mode/views/car_mode_view.dart';
+import '../../features/discovery/views/discovery_view.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -29,6 +30,11 @@ class AppPages {
       name: Routes.carMode,
       page: () => const CarModeView(),
       transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: Routes.discovery,
+      page: () => const DiscoveryView(),
+      transition: Transition.rightToLeft,
     ),
   ];
 }

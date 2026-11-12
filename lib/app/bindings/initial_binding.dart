@@ -11,6 +11,7 @@ import '../../features/equalizer/controllers/equalizer_controller.dart';
 import '../../features/playlists/controllers/favorites_controller.dart';
 import '../../features/playlists/controllers/smart_playlist_controller.dart';
 import '../../features/analytics/controllers/analytics_controller.dart';
+import '../../features/discovery/controllers/discovery_controller.dart';
 
 class InitialBinding extends Bindings {
   final SoniqAudioHandler audioHandler;
@@ -30,5 +31,6 @@ class InitialBinding extends Bindings {
     Get.put<AudioStudioController>(AudioStudioController(), permanent: true);
     Get.put<SettingsController>(SettingsController(), permanent: true);
     Get.put<AnalyticsController>(AnalyticsController(), permanent: true);
+    Get.lazyPut<DiscoveryController>(() => DiscoveryController(), fenix: true);
   }
 }

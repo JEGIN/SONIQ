@@ -12,6 +12,7 @@ import '../../../playlists/controllers/playlist_controller.dart';
 import '../../../playlists/controllers/favorites_controller.dart';
 import '../../controllers/player_controller.dart';
 import 'audio_quality_sheet.dart';
+import '../../../discovery/views/widgets/similar_songs_sheet.dart';
 
 class QueueBottomSheet extends StatefulWidget {
   const QueueBottomSheet({super.key});
@@ -1059,6 +1060,16 @@ class _QueueBottomSheetState extends State<QueueBottomSheet> with SingleTickerPr
                 onTap: () {
                   Navigator.pop(ctx);
                   AudioQualitySheet.show(context, song);
+                },
+              ),
+
+              // Song Radio / Similar Songs
+              ListTile(
+                leading: const Icon(Icons.radio_rounded, color: AppColors.gold),
+                title: const Text('Song Radio / Similar Songs', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  SimilarSongsSheet.show(context, song);
                 },
               ),
             ],

@@ -16,6 +16,7 @@ import '../../navigation/controllers/navigation_controller.dart';
 import '../../settings/views/settings_view.dart';
 import '../../car_mode/views/car_mode_view.dart';
 import '../../analytics/views/analytics_dashboard_view.dart';
+import '../../discovery/views/discovery_view.dart';
 import '../controllers/home_controller.dart';
 
 class HomeView extends StatelessWidget {
@@ -135,6 +136,19 @@ class HomeView extends StatelessWidget {
                         tooltip: 'Listening Analytics',
                         onPressed: () => Get.to(
                           () => const AnalyticsDashboardView(),
+                          transition: Transition.rightToLeft,
+                        ),
+                      ),
+
+                      // Music Discovery / Made for You Button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppColors.gold,
+                        ),
+                        tooltip: 'Music Discovery & Mixes',
+                        onPressed: () => Get.to(
+                          () => const DiscoveryView(),
                           transition: Transition.rightToLeft,
                         ),
                       ),
@@ -350,6 +364,73 @@ class HomeView extends StatelessWidget {
                         const Icon(
                           Icons.arrow_forward_ios_rounded,
                           color: AppColors.gold,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 5. Music Intelligence & Discovery Feature Shortcut Banner
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: SoniqCard(
+                    onTap: () => Get.to(
+                      () => const DiscoveryView(),
+                      transition: Transition.rightToLeft,
+                    ),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1B2A3D), Color(0xFF101622)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00ACC1).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF00ACC1),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome_rounded,
+                            color: Color(0xFF00ACC1),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Made for You & Discovery',
+                                style: AppTypography.headlineSmall,
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Daily Mixes, Artist Radio, Forgotten Gems & Similar Songs',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Color(0xFF00ACC1),
                           size: 16,
                         ),
                       ],

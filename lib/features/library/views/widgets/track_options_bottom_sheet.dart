@@ -9,6 +9,8 @@ import '../../../player/controllers/player_controller.dart';
 import '../../../playlists/controllers/playlist_controller.dart';
 import '../../../playlists/controllers/favorites_controller.dart';
 import '../../../analytics/views/widgets/entity_analytics_sheet.dart';
+import '../../../discovery/controllers/discovery_controller.dart';
+import '../../../discovery/views/widgets/similar_songs_sheet.dart';
 
 class TrackOptionsBottomSheet extends StatelessWidget {
   final SongModel song;
@@ -208,6 +210,30 @@ class TrackOptionsBottomSheet extends StatelessWidget {
                 );
               },
             ),
+
+            ListTile(
+              leading: const Icon(Icons.radio_rounded, color: AppColors.gold),
+              title: const Text('Song Radio / Similar Songs'),
+              subtitle: const Text('Discover tracks matching this vibe & tempo', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                SimilarSongsSheet.show(context, song);
+              },
+            ),
+
+            if (song.artist.isNotEmpty && song.artist.toLowerCase() != 'unknown')
+              ListTile(
+                leading: const Icon(Icons.hub_rounded, color: Color(0xFF00ACC1)),
+                title: Text('Start ${song.artist} Radio'),
+                subtitle: const Text('Music by this artist and related styles', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(context);
+                  final discoveryCtrl = Get.isRegistered<DiscoveryController>()
+                      ? Get.find<DiscoveryController>()
+                      : Get.put(DiscoveryController());
+                  discoveryCtrl.startArtistRadio(song.artist);
+                },
+              ),
 
             ListTile(
               leading: const Icon(Icons.share_rounded, color: AppColors.textPrimary),
