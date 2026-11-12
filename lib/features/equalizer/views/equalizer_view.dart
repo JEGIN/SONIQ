@@ -30,11 +30,18 @@ class EqualizerView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
               child: Row(
                 children: [
-                  Text(
-                    strings.text('equalizer'),
-                    style: AppTypography.displayLarge,
+                  Expanded(
+                    child: Text(
+                      strings.text('equalizer'),
+                      style: AppTypography.displayLarge.copyWith(
+                        fontSize: 22,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
 
                   // Preset Button
                   Obx(
@@ -42,7 +49,7 @@ class EqualizerView extends StatelessWidget {
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.surfaceElevated,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
+                          horizontal: 8,
                           vertical: 6,
                         ),
                         shape: RoundedRectangleBorder(
@@ -58,12 +65,17 @@ class EqualizerView extends StatelessWidget {
                         color: AppColors.gold,
                         size: 16,
                       ),
-                      label: Text(
-                        controller.currentPreset.value.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 70),
+                        child: Text(
+                          controller.currentPreset.value.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       onPressed: () =>
@@ -71,27 +83,30 @@ class EqualizerView extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
 
                   // Spatial Sound shortcut
                   IconButton(
                     icon: const Icon(
                       Icons.spatial_audio_rounded,
                       color: AppColors.gold,
-                      size: 22,
+                      size: 20,
                     ),
                     tooltip: strings.text('spatialAudio'),
                     onPressed: () => Get.to(() => const SpatialAudioView()),
                   ),
 
                   // Master EQ Switch
-                  Obx(
-                    () => Semantics(
-                      label: strings.text('equalizer'),
-                      child: Switch(
-                        value: controller.isEqualizerEnabled.value,
-                        activeThumbColor: AppColors.gold,
-                        onChanged: (val) => controller.toggleEqualizer(val),
+                  Transform.scale(
+                    scale: 0.85,
+                    child: Obx(
+                      () => Semantics(
+                        label: strings.text('equalizer'),
+                        child: Switch(
+                          value: controller.isEqualizerEnabled.value,
+                          activeThumbColor: AppColors.gold,
+                          onChanged: (val) => controller.toggleEqualizer(val),
+                        ),
                       ),
                     ),
                   ),

@@ -80,7 +80,7 @@ class SettingsView extends StatelessWidget {
                 ),
               ),
             ),
-
+            const SizedBox(height: 20),
             // Library & Audio Stats Card
             SoniqCard(
               child: Column(

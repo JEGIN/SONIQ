@@ -52,11 +52,14 @@ class _LibraryViewState extends State<LibraryView> {
               padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 12, 4),
               child: Row(
                 children: [
-                  Text(
-                    strings.text('local'),
-                    style: AppTypography.displayLarge,
+                  Expanded(
+                    child: Text(
+                      strings.text('local'),
+                      style: AppTypography.displayLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
                   IconButton(
                     icon: Icon(
                       _isSearchExpanded

@@ -533,7 +533,7 @@ class HomeView extends StatelessWidget {
               if (homeController.todaysMix.isNotEmpty)
                 SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 180,
+                    height: 200,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
@@ -571,7 +571,7 @@ class HomeView extends StatelessWidget {
                         ),
                       ),
                       SizedBox(
-                        height: 180,
+                        height: 200,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
@@ -605,7 +605,7 @@ class HomeView extends StatelessWidget {
                         ),
                       ),
                       SizedBox(
-                        height: 180,
+                        height: 200,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),

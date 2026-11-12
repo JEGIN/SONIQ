@@ -78,9 +78,13 @@ class _PlaylistsViewState extends State<PlaylistsView>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      strings.text('playlists'),
-                      style: AppTypography.displayLarge,
+                    Expanded(
+                      child: Text(
+                        strings.text('playlists'),
+                        style: AppTypography.displayLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     Row(
                       children: [
@@ -149,20 +153,34 @@ class _PlaylistsViewState extends State<PlaylistsView>
                       Tab(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.auto_awesome_rounded, size: 16),
-                            SizedBox(width: 8),
-                            Text(strings.text('aiSmartPlaylists')),
+                            const Icon(Icons.auto_awesome_rounded, size: 16),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                strings.text('aiSmartPlaylists'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Tab(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.queue_music_rounded, size: 16),
-                            SizedBox(width: 8),
-                            Text(strings.text('manual')),
+                            const Icon(Icons.queue_music_rounded, size: 16),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                strings.text('manual'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -244,9 +262,13 @@ class _PlaylistsViewState extends State<PlaylistsView>
                       children: [
                         Row(
                           children: [
-                            Text(
-                              strings.text('aiPlaylistStudio'),
-                              style: AppTypography.headlineSmall,
+                            Flexible(
+                              child: Text(
+                                strings.text('aiPlaylistStudio'),
+                                style: AppTypography.headlineSmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Container(
@@ -424,10 +446,15 @@ class _PlaylistsViewState extends State<PlaylistsView>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  strings.text('aiMoodEnergyPlaylists'),
-                  style: AppTypography.headlineMedium,
+                Expanded(
+                  child: Text(
+                    strings.text('aiMoodEnergyPlaylists'),
+                    style: AppTypography.headlineMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Obx(
                   () => Text(
                     '${smartCtrl.smartPlaylists.length} Smart',
