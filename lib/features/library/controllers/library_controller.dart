@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -185,6 +186,23 @@ class LibraryController extends GetxController {
 
   Future<void> importFolder() async {
     try {
+      if (Platform.isIOS) {
+        isScanning.value = true;
+        const channel = MethodChannel('com.soniq.soniq/folder_importer');
+        final count = await channel.invokeMethod<int>('importFolder') ?? 0;
+        if (count > 0) {
+          await scanLibrary();
+          Get.snackbar(
+            'Import Complete',
+            'Successfully imported $count songs to your library.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF1E202B),
+            colorText: Colors.white,
+          );
+        }
+        return;
+      }
+
       final selectedDirectory = await FilePicker.getDirectoryPath(
         dialogTitle: 'Select your SONGS or Music folder',
       );
@@ -197,7 +215,7 @@ class LibraryController extends GetxController {
         return;
       }
 
-      // Copy into app Documents folder so files are permanently accessible in iOS sandbox
+      // Copy into app Documents folder so files are permanently accessible in sandbox
       final appDocDir = await getApplicationDocumentsDirectory();
       final targetDir = Directory('${appDocDir.path}/Songs');
       if (!await targetDir.exists()) {
@@ -218,9 +236,7 @@ class LibraryController extends GetxController {
         }
       }
 
-      // Also remember this directory in customDirectories
       await cacheService.addCustomDirectory(selectedDirectory);
-
       await scanLibrary();
 
       Get.snackbar(
@@ -239,6 +255,23 @@ class LibraryController extends GetxController {
 
   Future<void> importAudioFiles() async {
     try {
+      if (Platform.isIOS) {
+        isScanning.value = true;
+        const channel = MethodChannel('com.soniq.soniq/folder_importer');
+        final count = await channel.invokeMethod<int>('importFiles') ?? 0;
+        if (count > 0) {
+          await scanLibrary();
+          Get.snackbar(
+            'Import Complete',
+            'Successfully imported $count songs to your library.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF1E202B),
+            colorText: Colors.white,
+          );
+        }
+        return;
+      }
+
       final pickedFiles = await FilePicker.pickFiles(
         type: FileType.audio,
       );
