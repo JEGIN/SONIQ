@@ -4,20 +4,27 @@ import UniformTypeIdentifiers
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private static var isFolderImporterRegistered = false
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    if let registrar = self.registrar(forPlugin: "SoniqFolderImporterPlugin") {
-      SoniqFolderImporterPlugin.register(with: registrar)
-    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SoniqFolderImporterPlugin") {
-      SoniqFolderImporterPlugin.register(with: registrar)
+    registerFolderImporter(with: engineBridge.pluginRegistry)
+  }
+
+  private func registerFolderImporter(with registry: FlutterPluginRegistry) {
+    guard !AppDelegate.isFolderImporterRegistered else { return }
+    if !registry.hasPlugin("SoniqFolderImporterPlugin") {
+      AppDelegate.isFolderImporterRegistered = true
+      if let registrar = registry.registrar(forPlugin: "SoniqFolderImporterPlugin") {
+        SoniqFolderImporterPlugin.register(with: registrar)
+      }
     }
   }
 }
@@ -65,6 +72,7 @@ class SoniqFolderImporterPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelega
     }
     picker.delegate = self
     picker.allowsMultipleSelection = false
+    picker.modalPresentationStyle = .formSheet
     rootVC.present(picker, animated: true, completion: nil)
   }
 
@@ -83,6 +91,7 @@ class SoniqFolderImporterPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelega
     }
     picker.delegate = self
     picker.allowsMultipleSelection = true
+    picker.modalPresentationStyle = .formSheet
     rootVC.present(picker, animated: true, completion: nil)
   }
 
@@ -195,10 +204,9 @@ class SoniqFolderImporterPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelega
 
   private func getTopViewController() -> UIViewController? {
     let keyWindow = UIApplication.shared.connectedScenes
-      .filter { $0.activationState == .foregroundActive }
       .compactMap { $0 as? UIWindowScene }
-      .first?.windows
-      .first { $0.isKeyWindow }
+      .flatMap { $0.windows }
+      .first { $0.isKeyWindow } ?? UIApplication.shared.windows.first { $0.isKeyWindow }
 
     var topVC = keyWindow?.rootViewController
     while let presented = topVC?.presentedViewController {
