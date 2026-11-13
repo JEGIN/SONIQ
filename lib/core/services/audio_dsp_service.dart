@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -21,7 +22,10 @@ class AudioDspService {
 
   int _lastSessionId = 0;
 
+  bool get isSupported => Platform.isAndroid;
+
   Stream<List<double>> get visualizerStream {
+    if (!isSupported) return const Stream.empty();
     _visualizerStream ??= _vizChannel
         .receiveBroadcastStream()
         .map(
@@ -36,6 +40,7 @@ class AudioDspService {
   }
 
   Stream<String> get deviceStream {
+    if (!isSupported) return const Stream.empty();
     _deviceStream ??= _deviceChannel
         .receiveBroadcastStream()
         .map((event) => event.toString())
@@ -46,7 +51,7 @@ class AudioDspService {
   }
 
   Future<Map<String, dynamic>?> attachAudioSession(int sessionId) async {
-    if (sessionId <= 0 || sessionId == _lastSessionId) return null;
+    if (!isSupported || sessionId <= 0 || sessionId == _lastSessionId) return null;
     _lastSessionId = sessionId;
     try {
       final res = await _channel.invokeMapMethod<String, dynamic>(
@@ -61,6 +66,7 @@ class AudioDspService {
   }
 
   Future<void> setEqualizerEnabled(bool enabled) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setEqualizerEnabled', {'enabled': enabled});
     } catch (e) {
@@ -69,6 +75,7 @@ class AudioDspService {
   }
 
   Future<void> set10BandGains(List<double> gains) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('set10BandGains', {'gains': gains});
     } catch (e) {
@@ -77,6 +84,7 @@ class AudioDspService {
   }
 
   Future<void> setBandGain(int band, double gainDb) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setBandGain', {
         'band': band,
@@ -88,6 +96,7 @@ class AudioDspService {
   }
 
   Future<void> setPreamp(double gainDb) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setPreamp', {'gainDb': gainDb});
     } catch (e) {
@@ -96,6 +105,7 @@ class AudioDspService {
   }
 
   Future<void> setBassBoost(int strength) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setBassBoost', {'strength': strength});
     } catch (e) {
@@ -104,6 +114,7 @@ class AudioDspService {
   }
 
   Future<void> setTrebleBoost(double gainDb) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setTrebleBoost', {'gainDb': gainDb});
     } catch (e) {
@@ -112,6 +123,7 @@ class AudioDspService {
   }
 
   Future<void> setVirtualizerStrength(int strength) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setVirtualizerStrength', {
         'strength': strength,
@@ -122,6 +134,7 @@ class AudioDspService {
   }
 
   Future<void> setVirtualizerMode(String mode) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setVirtualizerMode', {'mode': mode});
     } catch (e) {
@@ -130,6 +143,7 @@ class AudioDspService {
   }
 
   Future<void> setStereoWidth(int widthPercent) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setStereoWidth', {'width': widthPercent});
     } catch (e) {
@@ -138,6 +152,7 @@ class AudioDspService {
   }
 
   Future<Map<String, double>?> setChannelBalance(double balance) async {
+    if (!isSupported) return null;
     try {
       final res = await _channel.invokeMapMethod<String, dynamic>(
         'setChannelBalance',
@@ -156,6 +171,7 @@ class AudioDspService {
   }
 
   Future<void> setLimiterEnabled(bool enabled) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setLimiterEnabled', {'enabled': enabled});
     } catch (e) {
@@ -164,6 +180,7 @@ class AudioDspService {
   }
 
   Future<void> setVisualizerEnabled(bool enabled) async {
+    if (!isSupported) return;
     try {
       await _channel.invokeMethod('setVisualizerEnabled', {'enabled': enabled});
     } catch (e) {
@@ -172,6 +189,7 @@ class AudioDspService {
   }
 
   Future<String> getConnectedOutputDevice() async {
+    if (!isSupported) return 'speaker';
     try {
       final res = await _channel.invokeMethod<String>(
         'getConnectedOutputDevice',
@@ -183,6 +201,7 @@ class AudioDspService {
   }
 
   Future<bool> isCarConnected() async {
+    if (!isSupported) return false;
     try {
       final res = await _channel.invokeMethod<bool>('isCarConnected');
       return res ?? false;
@@ -192,6 +211,7 @@ class AudioDspService {
   }
 
   Future<Map<String, dynamic>?> getDeviceCapabilities() async {
+    if (!isSupported) return null;
     try {
       return await _channel.invokeMapMethod<String, dynamic>(
         'getDeviceCapabilities',
@@ -203,6 +223,7 @@ class AudioDspService {
   }
 
   Future<bool> setHighRefreshRate(bool enabled) async {
+    if (!isSupported) return false;
     try {
       final result = await _channel.invokeMethod<bool>('setHighRefreshRate', {
         'enabled': enabled,
@@ -215,6 +236,7 @@ class AudioDspService {
   }
 
   Future<Map<String, dynamic>?> getAudioFileSpecs(String filePath) async {
+    if (!isSupported) return null;
     try {
       final res = await _channel.invokeMapMethod<String, dynamic>(
         'getAudioFileSpecs',
