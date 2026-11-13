@@ -30,6 +30,20 @@ class EqualizerView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
               child: Row(
                 children: [
+                  if (Navigator.canPop(context)) ...[
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                      tooltip: 'Back',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: Text(
                       strings.text('equalizer'),

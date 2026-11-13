@@ -77,7 +77,12 @@ class SmartPlaylistDetailView extends StatelessWidget {
               pinned: true,
               backgroundColor: const Color(0xFF14121E),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                tooltip: 'Back',
                 onPressed: () => Get.back(),
               ),
               actions: [

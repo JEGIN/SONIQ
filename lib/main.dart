@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -81,7 +83,9 @@ class SoniqApp extends StatelessWidget {
       initialBinding: InitialBinding(audioHandler: audioHandler),
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
-      defaultTransition: Transition.fadeIn,
+      defaultTransition:
+          Platform.isIOS ? Transition.cupertino : Transition.fadeIn,
+      popGesture: true,
     );
   }
 }

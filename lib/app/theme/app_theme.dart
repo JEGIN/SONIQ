@@ -41,6 +41,13 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.textPrimary, size: 22),
         titleTextStyle: AppTypography.headlineMedium,
       ),
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (BuildContext context) => const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: AppColors.textPrimary,
+          size: 20,
+        ),
+      ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,

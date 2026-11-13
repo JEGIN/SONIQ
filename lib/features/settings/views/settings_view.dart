@@ -22,19 +22,29 @@ class SettingsView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary,
+            size: 20,
+          ),
+          tooltip: 'Back',
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        title: Text(
+          strings.text('settings'),
+          style: AppTypography.displayLarge.copyWith(fontSize: 22),
+        ),
+      ),
       body: SafeArea(
+        top: false,
         child: ListView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 16),
-              child: Text(
-                strings.text('settings'),
-                style: AppTypography.displayLarge,
-              ),
-            ),
-
             _buildSectionHeader(strings.text('languageRegion')),
             SoniqCard(
               padding: EdgeInsets.zero,

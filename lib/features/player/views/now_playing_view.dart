@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -34,6 +35,12 @@ class NowPlayingView extends StatelessWidget {
       body: SafeArea(
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
+          onVerticalDragEnd: (details) {
+            final velocity = details.primaryVelocity ?? 0;
+            if (velocity > 300) {
+              Get.back();
+            }
+          },
           onHorizontalDragEnd: (details) {
             final cache = SongCacheService();
             final gesturesEnabled =
@@ -69,11 +76,14 @@ class NowPlayingView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                      icon: Icon(
+                        Platform.isIOS
+                            ? Icons.arrow_back_ios_new_rounded
+                            : Icons.keyboard_arrow_down_rounded,
                         color: AppColors.textPrimary,
-                        size: 30,
+                        size: Platform.isIOS ? 22 : 30,
                       ),
+                      tooltip: 'Back',
                       onPressed: () => Get.back(),
                     ),
                     Text(
